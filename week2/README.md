@@ -19,3 +19,9 @@ github: https://github.com/rjrico510/rbif100/tree/main/week2
  - The motifs file is a text file with exactly 1 motif per line
  - The fasta file does not split the sequence portion via line feeds, i.e. the entire sequence is on one line.
  - A motif counts per occurrence, not simply per sequence (e.g. sequence ATAT containts motif AT twice)
+
+ Contents:
+ - scripts: bash script for the assignment; python equivalent
+ - data: inputs
+ - analysis: results of running the scripts
+ - assignment: folder of contents to use for actually publishing the assignment
