@@ -59,7 +59,7 @@ def main():
             f.write("{} {}\n".format(motif, motif_count[motif]))
 
     for motif in motif_matches:
-        with open(os.path.join(args.motif_dir, "{}.txt".format(motif)), "w") as f:
+        with open(os.path.join(args.motif_dir, "{}.fasta".format(motif)), "w") as f:
             for entry in motif_matches[motif]:
                 f.write(entry.desc)
                 f.write(entry.seq)
