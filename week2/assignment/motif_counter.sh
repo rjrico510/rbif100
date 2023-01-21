@@ -1,1 +1,1 @@
-../scripts/week2.sh
+../scripts/motif_counter.sh
