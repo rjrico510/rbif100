@@ -1,8 +1,10 @@
-# RBIF100 Assignment 1
+# RBIF100 Assignment 1 (Week 2)
 
  Author: Rudy Rico
 
  email: rrico@brandeis.edu
+
+github: https://github.com/rjrico510/rbif100/tree/main/week2
 
  Goals: given a list of motifs and a fasta file, write a bash script which produces:
  - file containing the number of times each motif is present.
