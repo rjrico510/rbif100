@@ -18,7 +18,7 @@
  Assumptions:
  - The motifs file is a text file with exactly 1 motif per line
  - The fasta file does not split the sequence portion via line feeds, i.e. the entire sequence is on one line.
-  - A motif counts per occurrence, not simply per sequence (e.g. sequence ATAT containts motif AT twice)
+ - A motif counts per occurrence, not simply per sequence (e.g. sequence ATAT containts motif AT twice)
 
  Contents:
  - README.md (this file)
