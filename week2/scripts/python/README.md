@@ -3,4 +3,4 @@
  Python version of the assignment.
 
  For usage:
- `python week3.py --help`
+ `python motif_counter.py --help`

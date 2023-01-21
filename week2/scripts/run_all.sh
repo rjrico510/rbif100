@@ -2,10 +2,10 @@
 # generate all data
 
 # test
-./week2.sh ../data/test/test1.fa ../data/test/test1_motifs.txt ../analysis/test/motifs ../analysis/test/motif_count.txt
+./motif_counter.sh ../data/test/test1.fa ../data/test/test1_motifs.txt ../analysis/test/motifs ../analysis/test/motif_count.txt
 
 # assignment (bash)
-./week2.sh ../data/assignment/r_bifella.fasta ../data/assignment/interesting_motifs.txt ../analysis/assignment/motifs ../analysis/assignment/motif_count.txt
+./motif_counter.sh ../data/assignment/r_bifella.fasta ../data/assignment/interesting_motifs.txt ../analysis/assignment/motifs ../analysis/assignment/motif_count.txt
 
 # assignment (python)
 cd python || exit
