@@ -23,9 +23,11 @@
  Contents:
  - README.md (this file)
  - week2.sh - the script which finds the motifs and generates the results
- - data - the two input files for the assignment
- - analysis - the results of the assignment
- - run.sh - the actual command use to run the data in this layout
+ - r_bifella.fasta - input: the assignment fasta
+ - interesting_motifs.txt - input: the assignment motifs
+ - motifs - output: the folder of per-motif fastas
+ - motif_count.txt - output: the per-motif counts
+ - run.sh - the actual command use to run the data to get to this output
 
  Notes:
  The linked git repository includes:

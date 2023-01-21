@@ -1,3 +1,2 @@
 #!/bin/bash
-mkdir analysis
-./week2.sh data/r_bifella.fasta data/interesting_motifs.txt analysis/motifs analysis/motif_count.txt
+./week2.sh r_bifella.fasta interesting_motifs.txt
