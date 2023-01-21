@@ -28,7 +28,7 @@ github: https://github.com/rjrico510/rbif100/tree/main/week2
  - run.sh - the actual command use to run the data in this layout
 
  Notes:
- - the linked git repository includes:
- -- all of the above
- -- a python implementation to verify the result
- -- a tiny test dataset
+ The linked git repository includes:
+ - all of the above
+ - a python implementation to verify the result
+ - a tiny test dataset
