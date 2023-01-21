@@ -11,7 +11,7 @@ github: https://github.com/rjrico510/rbif100/tree/main/week2
  - folder of fasta files (1 per motif) which include only the entry for a given motif.
 
  Usage:
- `./motif_counter.sh fasta_file motifs_file`
+ `./week2.sh fasta_file motifs_file`
 
  Note: the script will take two optional positional parameters - name of the motifs folder, and the name of the motif count file.
 

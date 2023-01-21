@@ -10,7 +10,7 @@
 # output:
 # - folder of fastas (default name: motifs)
 #
-# usage: ./motif_counter.sh <FASTA FILE> <MOTIFS FILE> <MOTIFS OUTPUT FOLDER (optional)> <MOTIFS COUNT FILE (optional)
+# usage: ./week2.sh <FASTA FILE> <MOTIFS FILE> <MOTIFS OUTPUT FOLDER (optional)> <MOTIFS COUNT FILE (optional)
 
 FASTA_FILE=$1
 MOTIFS_FILE=$2

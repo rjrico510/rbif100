@@ -1,0 +1,1 @@
+../scripts/week2.sh

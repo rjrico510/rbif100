@@ -1,1 +1,0 @@
-../scripts/motif_counter.sh

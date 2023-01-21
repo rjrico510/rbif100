@@ -11,7 +11,7 @@
  - folder of fasta files (1 per motif) which include only the entry for a given motif.
 
  Usage:
- `./motif_counter.sh fasta_file motifs_file`
+ `./week2.sh fasta_file motifs_file`
 
  Note: the script will take two optional positional parameters - name of the motifs folder, and the name of the motif count file.
 
@@ -22,7 +22,7 @@
 
  Contents:
  - README.md (this file)
- - motif_counter.sh - the script which finds the motifs and generates the results
+ - week2.sh - the script which finds the motifs and generates the results
  - data - the two input files for the assignment
  - analysis - the results of the assignment
  - run.sh - the actual command use to run the data in this layout
