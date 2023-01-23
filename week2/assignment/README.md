@@ -14,7 +14,8 @@
  ## Usage
  `./week2.sh fasta_file motifs_file`
 
- Note: the script will take two optional positional parameters - name of the motifs folder, and the name of the motif count file.
+ - The script will take two optional positional parameters - name of the motifs folder, and the name of the motif count file.
+ - The script will exit without executing if either input already exists
 
  ## Assignment Command
  `./week2.sh r_bifella.fasta interesting_motifs.txt`
@@ -38,5 +39,9 @@
  - all of the above
  - a python implementation to verify the result
  - a tiny test dataset
+
+
  The bash script was written using vscode & linted with the ShellCheck extension.
+ 
  The optional paths to the outputs were included primarily for testing.
+ A better way to implement the two optional parameters would be with flags.
