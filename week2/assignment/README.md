@@ -38,3 +38,5 @@
  - all of the above
  - a python implementation to verify the result
  - a tiny test dataset
+ The bash script was written using vscode & linted with the ShellCheck extension.
+ The optional paths to the outputs were included primarily for testing.
