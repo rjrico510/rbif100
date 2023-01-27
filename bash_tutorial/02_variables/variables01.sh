@@ -1,4 +1,5 @@
 #!/bin/bash
+# echo some params
 
 echo "name: $0"
 echo "variables: $@"
