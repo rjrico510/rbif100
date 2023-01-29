@@ -17,7 +17,7 @@ def main():
     """
     parser = argparse.ArgumentParser(description="get exomes with specified diameter range")
     parser.add_argument("clinical_txt", help="clinical file")
-    parser.add_argument("exome_dir", help="text file of motifs to search for")
+    parser.add_argument("exome_dir", help="exome folder")
     parser.add_argument("-o", "--output-dir", dest="output_dir", default=DEFAULT_COHORT_DIR, help="directory to copy fastas")
     parser.add_argument("-l", "--lower-bound", dest="lower_bound", type=int, default=DEFAULT_LOWER, help="lower bound (inclusive)")
     parser.add_argument("-u", "--upper-bound", dest="upper_bound", type=int, default=DEFAULT_UPPER, help="upper bound (inclusive)")
