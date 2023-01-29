@@ -10,7 +10,10 @@ DEFAULT_UPPER = 30
 DEFAULT_LOWER = 20
 
 HEADER_DIAMETER = "Diamater (mm)"
+HEADER_STATUS = "Status"
 HEADER_CODENAME = "code_name"
+
+SEQ_FLAG = "Sequenced"
 
 def main():
     """main
@@ -30,14 +33,16 @@ def main():
         f.seek(0)
         reader = csv.DictReader(f, dialect=dialect)
         for line in reader:
-            print(f"{line[HEADER_CODENAME]}: {line[HEADER_DIAMETER]}")
+            msg = f"{line[HEADER_CODENAME]}: {line[HEADER_DIAMETER]} {line[HEADER_STATUS]}"
             diameter = int(line[HEADER_DIAMETER])
-            if args.lower_bound <= diameter <= args.upper_bound:
+            if args.lower_bound <= diameter <= args.upper_bound and line[HEADER_STATUS] == SEQ_FLAG:
                 code_name = line[HEADER_CODENAME]
-                print(f"{code_name} MATCH")
+                msg += " MATCH"
                 src = os.path.join(args.exome_dir, f"{code_name}.fasta")
                 dest = os.path.join(args.output_dir, f"{code_name}.fasta")
                 shutil.copy(src, dest)
+            print(msg)
+
 
 if __name__ == "__main__":
     main()
