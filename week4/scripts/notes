@@ -1,0 +1,2 @@
+- CreateCrisprReady
+-- consider using sed -n '1,3'p motif file to get 1st 3 lines of sorted motif list
