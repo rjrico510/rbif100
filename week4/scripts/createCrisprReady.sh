@@ -4,11 +4,18 @@
 # and for each exome creates a fasta of only the sequences containing 
 # the top 3 motifs
 #
+# Assumptions:
+# - fasta files in exome dir are named <exome>.fasta
+#
 # input:
 # - motif file (list of sequences, 1 per row; no header)
 # - exome dir 
 # - output dir
 #
+# output:
+# - fastas in output dir named <exome>_topmotifs.fasta
+#
+
 MOTIFS_FILE=$1
 EXOME_DIR=$2
 OUTPUT_DIR=${3:-$2}
@@ -33,6 +40,8 @@ for FASTA_FILE in "$EXOME_DIR"/*.fasta; do
     while read -r MOTIF; do
         echo "${MOTIF}" "$(grep -o "${MOTIF}" "${FASTA_FILE}" | wc -l)" >> "${MOTIFS_COUNT}"
     done <"${MOTIFS_FILE}"
+
+    # TODO - link the above & below together; use tee to get motifs file for debuging
 
     # https://www.unix.com/shell-programming-and-scripting/178162-converting-column-row.html
     # https://stackoverflow.com/questions/39420589/how-to-handle-bash-sort-of-for-tie-conditions
