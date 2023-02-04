@@ -19,6 +19,11 @@
 FASTA_DIR=$1
 OUTPUT_DIR=${2:-$1}
 
+# report inputs
+echo "inputs:"
+echo "fasta dir: ${FASTA_DIR}"
+echo "output dir: ${OUTPUT_DIR}"
+
 mkdir -p "${OUTPUT_DIR}"
 
 for FASTA_FILE in "$FASTA_DIR"/*.fasta; do
@@ -28,6 +33,7 @@ for FASTA_FILE in "$FASTA_DIR"/*.fasta; do
     OUT_FILE="${OUTPUT_DIR}/${EXOME}_precrispr.fasta"
 
     # search for 20 bases + NGG
+    # TODO - what if GG is contained in the 1st 20 bases?
     echo "searching ${FASTA_FILE} ..."
     grep -E "[ATCG]{21}GG" -B 1 --no-group-separator "${FASTA_FILE}" > "${OUT_FILE}"
 done

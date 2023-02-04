@@ -17,18 +17,24 @@
 #
 
 FASTA_DIR=$1
-BASE=${2:"A"}
+BASE=${2:-"A"}
 OUTPUT_DIR=${3:-$1}
+
+# report inputs
+echo "inputs:"
+echo "fasta dir: ${FASTA_DIR}"
+echo "base: ${BASE}"
+echo "output dir: ${OUTPUT_DIR}"
 
 mkdir -p "${OUTPUT_DIR}"
 
 for FASTA_FILE in "$FASTA_DIR"/*.fasta; do
     # setup
     # TODO - revisit - does this make sense if everything is in the same dir?
-    EXOME=$(basename "${FASTA_FILE}" | sed "s/.fasta//g")
-    OUT_FILE="${OUTPUT_DIR}/${EXOME}_topmotifs.fasta"
+    EXOME=$(basename "${FASTA_FILE}" | sed -r -e "s/([a-zA-Z]+)_.*.fasta/\1/")
+    OUT_FILE="${OUTPUT_DIR}/${EXOME}_postcrispr.fasta"
 
     # search for 20 bases + NGG
-    echo "searching ${FASTA_FILE} ..."
-    grep -E "[ATCG]{21}GG" -B 1 --no-group-separator "${FASTA_FILE}" > "${OUT_FILE}"
+    echo "modifying ${FASTA_FILE} ..."
+    sed -r "s/([ATCG]{20})([ATCG]GG)/\1${BASE}\2/g" "${FASTA_FILE}" > "${OUT_FILE}"
 done
