@@ -1,0 +1,6 @@
+inputs:
+clinical file: ../data/assignment/clinical_data.txt
+exome dir: ../data/assignment/exomes
+output dir: ../analysis/assignment/exomesCohort
+lower bound: 20
+upper bound: 30

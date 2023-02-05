@@ -1,0 +1,28 @@
+fasta: chicken.fasta
+PASS 1 - get motif counts
+[('TTTTTACACTTC', 261), ('TACACTTCTACA', 164), ('CTTCAAAATTTT', 98)]
+PASS 2 - make fastas for top 3 counts
+fasta: dromedary.fasta
+PASS 1 - get motif counts
+[('TTTTTACACTTC', 350), ('CTTCAAAATTTT', 158), ('TACACTTCTACA', 104)]
+PASS 2 - make fastas for top 3 counts
+fasta: fox.fasta
+PASS 1 - get motif counts
+[('TTTTTACACTTC', 368), ('TACACTTCTACA', 106), ('CTTCAAAATTTT', 98)]
+PASS 2 - make fastas for top 3 counts
+fasta: goat.fasta
+PASS 1 - get motif counts
+[('TTTTTACACTTC', 341), ('CTTCAAAATTTT', 148), ('TACACTTCTACA', 128)]
+PASS 2 - make fastas for top 3 counts
+fasta: gopher.fasta
+PASS 1 - get motif counts
+[('TTTTTACACTTC', 243), ('CTTCAAAATTTT', 154), ('TACACTTCTACA', 122)]
+PASS 2 - make fastas for top 3 counts
+fasta: gorilla.fasta
+PASS 1 - get motif counts
+[('TTTTTACACTTC', 360), ('CTTCAAAATTTT', 134), ('TACACTTCTACA', 122)]
+PASS 2 - make fastas for top 3 counts
+fasta: lamb.fasta
+PASS 1 - get motif counts
+[('TTTTTACACTTC', 365), ('CTTCAAAATTTT', 127), ('TACACTTCTACA', 126)]
+PASS 2 - make fastas for top 3 counts
