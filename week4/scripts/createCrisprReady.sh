@@ -10,11 +10,12 @@
 # input:
 # - motif file (list of sequences, 1 per row; no header)
 # - exome dir 
-# - output dir
+# - output dir (defaults to exome dir)
 #
 # output:
 # - fastas in output dir named <exome>_topmotifs.fasta
 #
+# usage: ./createCrisprReady.sh <MOTIFS FILE> <EXOME DIR> <OUTPUT DIR (optional)>
 
 MOTIFS_FILE=$1
 EXOME_DIR=$2
@@ -35,6 +36,15 @@ for FASTA_FILE in "$EXOME_DIR"/*.fasta; do
     EXOME=$(basename "${FASTA_FILE}" | sed "s/.fasta//g")
     OUT_FILE="${OUTPUT_DIR}/${EXOME}_topmotifs.fasta"
     MOTIFS_COUNT="${OUTPUT_DIR}/${EXOME}_motif_count.txt"
+
+    # don't overwrite - exit if output exists
+    if [ -f "${OUT_FILE}" ]; then
+        echo "${OUT_FILE} already exists - exiting"
+        exit 2
+    elif [ -f "${MOTIFS_COUNT}" ]; then
+        echo "${MOTIFS_COUNT} already exists - exiting"
+        exit 2
+    fi
 
     # get the count of each motif and output to a file
     while read -r MOTIF; do

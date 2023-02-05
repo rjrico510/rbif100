@@ -15,6 +15,7 @@
 # output:
 # - fastas in output dir named <exome>_precrispr.fasta
 #
+# usage: ./identifyCrisprSite.sh <FASTA DIR> <OUTPUT_DIR (optional)>
 
 FASTA_DIR=$1
 OUTPUT_DIR=${2:-$1}
@@ -28,9 +29,14 @@ mkdir -p "${OUTPUT_DIR}"
 
 for FASTA_FILE in "$FASTA_DIR"/*_topmotifs.fasta; do
     # setup
-    # TODO - revisit - does this make sense if everything is in the same dir?
     EXOME=$(basename "${FASTA_FILE}" | sed -r -e "s/([a-zA-Z]+)_.*.fasta/\1/")
     OUT_FILE="${OUTPUT_DIR}/${EXOME}_precrispr.fasta"
+
+    # don't overwrite - exit if output exists
+    if [ -f "${OUT_FILE}" ]; then
+        echo "${OUT_FILE} already exists - exiting"
+        exit 2
+    fi
 
     # search for 20 bases + NGG
     # TODO - what if GG is contained in the 1st 20 bases?

@@ -38,7 +38,12 @@ echo "lower bound: ${LOWER}"
 echo "upper bound: ${UPPER}"
 
 # create the output dir
-mkdir -p "${OUTPUT_DIR}"
+if [ -d "${OUTPUT_DIR}" ]; then
+    echo "${OUTPUT_DIR} already exists - exiting"
+    exit 2
+else
+    mkdir -p "${OUTPUT_DIR}"
+fi
 
 # for each row in the clinical file:
 # - extract the diameter, status and code name
