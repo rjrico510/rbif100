@@ -1,0 +1,7 @@
+fasta: chicken_topmotifs.fasta
+fasta: dromedary_topmotifs.fasta
+fasta: fox_topmotifs.fasta
+fasta: goat_topmotifs.fasta
+fasta: gopher_topmotifs.fasta
+fasta: gorilla_topmotifs.fasta
+fasta: lamb_topmotifs.fasta

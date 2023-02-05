@@ -1,0 +1,4 @@
+inputs:
+motif file: ../data/assignment/motif_list.txt
+exome dir: ../analysis/assignment/exomesCohort
+output dir: ../analysis/assignment/TopMotifs

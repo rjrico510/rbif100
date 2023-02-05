@@ -1,0 +1,7 @@
+fasta: chicken_precrispr.fasta
+fasta: dromedary_precrispr.fasta
+fasta: fox_precrispr.fasta
+fasta: goat_precrispr.fasta
+fasta: gopher_precrispr.fasta
+fasta: gorilla_precrispr.fasta
+fasta: lamb_precrispr.fasta

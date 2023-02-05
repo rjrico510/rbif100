@@ -1,0 +1,50 @@
+addax: 68 Sequenced
+badger: 44 Sequenced
+basilisk: 6 Sequenced
+bat: 75 Sequenced
+bear: 66 Sequenced
+beetle: 64 Not sequenced
+budgerigar: 78 Sequenced
+buffalo: 19 Sequenced
+bull: 57 Sequenced
+bunny: 26 Not sequenced
+camel: 72 Sequenced
+chicken: 26 Sequenced MATCH
+cow: 15 Not sequenced
+coyote: 32 Sequenced
+deer: 80 Sequenced
+dingo: 41 Not sequenced
+dog: 19 Not sequenced
+dromedary: 30 Sequenced MATCH
+eland: 39 Sequenced
+elephant: 42 Sequenced
+finch: 62 Not sequenced
+fox: 26 Sequenced MATCH
+goat: 24 Sequenced MATCH
+gopher: 21 Sequenced MATCH
+gorilla: 30 Sequenced MATCH
+groundhog: 47 Sequenced
+highland: 5 Not sequenced
+impala: 55 Sequenced
+kangaroo: 48 Sequenced
+kitten: 74 Sequenced
+lamb: 28 Sequenced MATCH
+lion: 17 Not sequenced
+lizard: 4 Sequenced
+lovebird: 25 Not sequenced
+mongoose: 58 Not sequenced
+oryx: 71 Sequenced
+panther: 55 Sequenced
+parrot: 35 Sequenced
+peccary: 56 Sequenced
+pronghorn: 65 Sequenced
+puma: 80 Sequenced
+salamander: 40 Not sequenced
+sheep: 78 Not sequenced
+snake: 46 Sequenced
+snowy: 5 Sequenced
+springbok: 60 Sequenced
+turtle: 20 Not sequenced
+walrus: 14 Sequenced
+warthog: 33 Not sequenced
+waterbuck: 66 Sequenced

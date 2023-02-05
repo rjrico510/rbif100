@@ -1,0 +1,9 @@
+Organism chicken, discovered by Rivet, has a diameter of 26, and is from the environment Swamp
+Organism dromedary, discovered by Forness, has a diameter of 30, and is from the environment Sewage
+Organism fox, discovered by Vanderburg, has a diameter of 26, and is from the environment River
+Organism goat, discovered by Gorham, has a diameter of 24, and is from the environment Sewage
+Organism gopher, discovered by Mccafferty, has a diameter of 21, and is from the environment Sewage
+Organism gorilla, discovered by Landey, has a diameter of 30, and is from the environment River
+Organism lamb, discovered by Kesner, has a diameter of 28, and is from the environment Sewage
+The number of the union of genes across the cohort is 105.  Those genes are:
+gene6,gene8,gene20,gene25,gene37,gene41,gene45,gene46,gene60,gene67,gene68,gene70,gene74,gene77,gene82,gene85,gene86,gene98,gene100,gene102,gene107,gene114,gene121,gene122,gene130,gene134,gene140,gene142,gene143,gene145,gene146,gene147,gene149,gene153,gene162,gene165,gene180,gene186,gene187,gene190,gene195,gene196,gene198,gene199,gene206,gene219,gene220,gene224,gene234,gene235,gene237,gene239,gene249,gene262,gene266,gene268,gene271,gene276,gene286,gene291,gene297,gene305,gene307,gene316,gene317,gene321,gene322,gene323,gene325,gene328,gene332,gene333,gene335,gene347,gene355,gene360,gene361,gene369,gene371,gene377,gene378,gene383,gene390,gene398,gene404,gene406,gene409,gene410,gene411,gene416,gene421,gene427,gene428,gene431,gene439,gene445,gene447,gene454,gene457,gene461,gene471,gene474,gene485,gene490,gene499
