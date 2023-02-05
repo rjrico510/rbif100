@@ -11,7 +11,7 @@
 # - motif file (list of sequences, 1 per row; no header)
 # - exome dir 
 # - output dir (defaults to exome dir)
-# - debug - saves motif count (default: delete file)
+# - debug - saves motif count if set to 1 (default: delete file)
 #
 # output:
 # - fastas in output dir named <exome>_topmotifs.fasta
@@ -46,21 +46,15 @@ for FASTA_FILE in "$EXOME_DIR"/*.fasta; do
         exit 2
     fi
 
-    # The following really long line does the following:
-    # for each motif, report the motif & number of occurrences in the fasta
-    # sort by # of occurrences
-    # write the counts to a file (for debugging)
-    # keep only the top 3
-    # remove the count and keep only the motifs
-    # convert to a string usable by grep : motif1|motif2|motif3
+    # get the count of each motif and output to a file
+    while read -r MOTIF; do
+        echo "${MOTIF}" "$(grep -o "${MOTIF}" "${FASTA_FILE}" | wc -l)" >> "${MOTIFS_COUNT}"
+    done <"${MOTIFS_FILE}"
 
-    # a few references on how we got here:
-    # https://superuser.com/questions/1334561/using-xargs-pass-arguments-to-sub-shell-with-pipe
+    # sort the motif file, get the top 3, and turn the motifs into a string usable by grep
     # https://www.unix.com/shell-programming-and-scripting/178162-converting-column-row.html
     # https://stackoverflow.com/questions/39420589/how-to-handle-bash-sort-of-for-tie-conditions
-    # https://stackoverflow.com/questions/44152760/xargs-sh-c-and-variables
-
-    PATTERN=$(<"${MOTIFS_FILE}" xargs -n 1 -I {} sh -c 'echo {} $(grep -o {} $0 | wc -l)' "${FASTA_FILE}" | sort -k 2rn | tee "${MOTIFS_COUNT}" | head -3 | cut -d' ' -f1 | awk 'BEGIN { ORS="|" } {print}')
+    PATTERN=$(sort -k 2rn "${MOTIFS_COUNT}" | head -3 | cut -d' ' -f1 | awk 'BEGIN { ORS="|" } {print}')
     PATTERN=${PATTERN%?} # remove trailing "|"
 
     # write the fastas matching any motif to output
@@ -70,5 +64,4 @@ for FASTA_FILE in "$EXOME_DIR"/*.fasta; do
     if [ "${DEBUG}" == "0" ]; then
         rm -f "${MOTIFS_COUNT}"
     fi
-
 done
