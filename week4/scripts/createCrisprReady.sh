@@ -11,6 +11,7 @@
 # - motif file (list of sequences, 1 per row; no header)
 # - exome dir 
 # - output dir (defaults to exome dir)
+# - debug - saves motif count if set to 1 (default: delete file)
 #
 # output:
 # - fastas in output dir named <exome>_topmotifs.fasta
@@ -20,6 +21,7 @@
 MOTIFS_FILE=$1
 EXOME_DIR=$2
 OUTPUT_DIR=${3:-$2}
+DEBUG=${4:-"0"}
 
 DEBUG=1 # debugging
 
@@ -64,7 +66,7 @@ for FASTA_FILE in "$EXOME_DIR"/*.fasta; do
     grep -E -B 1 --no-group-separator "${PATTERN}" "${FASTA_FILE}" > "${OUT_FILE}"
 
     # cleanup
-    if [ "${DEBUG}" -ne 1 ]; then
+    if [ "${DEBUG}" != "1" ]; then
         rm -f "${MOTIFS_COUNT}"
     fi
 done
