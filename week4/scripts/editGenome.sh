@@ -6,7 +6,7 @@
 # - outputs a new fasta where NGG -> <base>NGG
 #
 # Assumptions:
-# - fasta file inputs are named <exome>_*.fasta
+# - fasta file inputs are named <exome>_precrispr.fasta
 #
 # input:
 # - fasta dir 
@@ -17,8 +17,8 @@
 #
 
 FASTA_DIR=$1
-BASE=${2:-"A"}
-OUTPUT_DIR=${3:-$1}
+OUTPUT_DIR=${2:-$1}
+BASE=${3:-"A"}
 
 # report inputs
 echo "inputs:"
@@ -28,7 +28,7 @@ echo "output dir: ${OUTPUT_DIR}"
 
 mkdir -p "${OUTPUT_DIR}"
 
-for FASTA_FILE in "$FASTA_DIR"/*.fasta; do
+for FASTA_FILE in "$FASTA_DIR"/*_precrispr.fasta; do
     # setup
     # TODO - revisit - does this make sense if everything is in the same dir?
     EXOME=$(basename "${FASTA_FILE}" | sed -r -e "s/([a-zA-Z]+)_.*.fasta/\1/")

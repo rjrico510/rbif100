@@ -5,6 +5,9 @@ import collections
 import os
 import re
 
+FASTA_INPUT_SUFFIX = "_precrispr.fasta"
+FASTA_OUTPUT_SUFFIX = "_postcrispr.fasta"
+
 FastaEntry = collections.namedtuple("FastaEntry", ["desc", "seq"])
 
 def get_fasta_entry(f):
@@ -28,13 +31,17 @@ def main():
     """
     parser = argparse.ArgumentParser(description="Insert base before PAM")
     parser.add_argument("fasta_dir", help="fasta directory")
-    parser.add_argument("output_dir", help="output directory")
+    parser.add_argument("--output-dir", dest="output_dir", help="output directory")
     parser.add_argument("--base", help="fasta directory", default="A")
     args = parser.parse_args()
 
-    os.makedirs(args.output_dir)
+    if args.output_dir:
+        output_dir = args.output_dir
+        os.makedirs(output_dir)
+    else:
+        output_dir = args.fasta_dir
     
-    fasta_filenames = [f for f in os.listdir(args.fasta_dir) if f.endswith(".fasta")]
+    fasta_filenames = [f for f in os.listdir(args.fasta_dir) if f.endswith(FASTA_INPUT_SUFFIX)]
     regex = re.compile(r'([ACTG]{20})([ACTG]GG)')
 
     for fasta_filename in fasta_filenames:
@@ -42,7 +49,7 @@ def main():
         # setup
         fasta_file = os.path.join(args.fasta_dir, fasta_filename)
         exome_name = fasta_filename.split("_")[0]
-        output_file = os.path.join(args.output_dir, f"{exome_name}_postcrispr.fasta")
+        output_file = os.path.join(output_dir, f"{exome_name}{FASTA_OUTPUT_SUFFIX}")
 
         with open(fasta_file) as f, open(output_file, "w") as fo:
             entry_gen = get_fasta_entry(f)

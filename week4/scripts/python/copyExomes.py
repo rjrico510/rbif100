@@ -26,7 +26,8 @@ def main():
     parser.add_argument("-u", "--upper-bound", dest="upper_bound", type=int, default=DEFAULT_UPPER, help="upper bound (inclusive)")
     args = parser.parse_args()
 
-    os.makedirs(args.output_dir)
+    if not os.path.exists(args.output_dir):
+        os.makedirs(args.output_dir)
 
     with open(args.clinical_txt) as f:
         dialect = csv.Sniffer().sniff(f.read(1024))

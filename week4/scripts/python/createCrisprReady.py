@@ -4,6 +4,8 @@ import argparse
 import collections
 import os
 
+FASTA_OUTPUT_SUFFIX = "_topmotifs.fasta"
+
 FastaEntry = collections.namedtuple("FastaEntry", ["desc", "seq"])
 
 def get_fasta_entry(f):
@@ -28,10 +30,14 @@ def main():
     parser = argparse.ArgumentParser(description="Get sequences for top 3 motifs for each fasta in a folder")
     parser.add_argument("fasta_dir", help="fasta directory")
     parser.add_argument("motifs_file", help="text file of motifs to search for")
-    parser.add_argument("output_dir", help="output directory")
+    parser.add_argument("--output-dir", dest="output_dir", help="output directory")
     args = parser.parse_args()
 
-    os.makedirs(args.output_dir)
+    if args.output_dir:
+        output_dir = args.output_dir
+        os.makedirs(output_dir)
+    else:
+        output_dir = args.fasta_dir
 
     motif_count = {}
     with open(args.motifs_file) as f:
@@ -45,8 +51,8 @@ def main():
         # setup
         fasta_file = os.path.join(args.fasta_dir, fasta_filename)
         exome_name, _ = os.path.splitext(fasta_filename)
-        output_file = os.path.join(args.output_dir, f"{exome_name}_topmotifs.fasta")
-        count_file = os.path.join(args.output_dir, f"{exome_name}_motif_count.txt")
+        output_file = os.path.join(output_dir, f"{exome_name}{FASTA_OUTPUT_SUFFIX}")
+        count_file = os.path.join(output_dir, f"{exome_name}_motif_count.txt")
 
         with open(fasta_file) as f, open(output_file, "w") as fo, open(count_file, "w") as fc:
             # pass 1 - get the motif counts

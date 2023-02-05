@@ -6,10 +6,10 @@
 # - outputs a new fasta of only the matching entries
 #
 # Assumptions:
-# - fasta file inputs are named <exome>_*.fasta
+# - fasta file inputs are named <exome>_topmotifs.fasta
 #
 # input:
-# - fasta dir 
+# - fasta dir of files named <exome>_topmotifs.fasta
 # - output dir (defaults to input dir)
 #
 # output:
@@ -26,7 +26,7 @@ echo "output dir: ${OUTPUT_DIR}"
 
 mkdir -p "${OUTPUT_DIR}"
 
-for FASTA_FILE in "$FASTA_DIR"/*.fasta; do
+for FASTA_FILE in "$FASTA_DIR"/*_topmotifs.fasta; do
     # setup
     # TODO - revisit - does this make sense if everything is in the same dir?
     EXOME=$(basename "${FASTA_FILE}" | sed -r -e "s/([a-zA-Z]+)_.*.fasta/\1/")
