@@ -94,6 +94,7 @@ The following commands will run the assignment:
   - The implementation generates an intermediate file for debugging, which it disposes of at the end (unless debugging is on).
   - The original implementation was a much simpler one which wrote the motif count to an intermediate file, then created a search string by reading the file back in.
   - I went back and forth on which implementation was "better" - in practice I might be more likely to use the original one in production.    However, I ended up using the one-liner since it was a useful exercise in bash.
+  - I kept the simpler one around: https://github.com/rjrico510/rbif100/blob/main/week4/scripts/createCrisprReady_ORIGINAL.sh
 - The positional arguments in editGenome.sh include an optional base (or sequence) to insert which defaults to A.
   - This should probably be replaced with a shift/case construct
 - The scripts specifically look for fastas named by their preceding scripts, e.g. identifyCrisprSite.sh specifically looks for files matching "*_topmotifs.fasta".
