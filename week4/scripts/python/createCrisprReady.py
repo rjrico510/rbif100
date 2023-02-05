@@ -30,7 +30,7 @@ def main():
     parser = argparse.ArgumentParser(description="Get sequences for top 3 motifs for each fasta in a folder")
     parser.add_argument("fasta_dir", help="fasta directory")
     parser.add_argument("motifs_file", help="text file of motifs to search for")
-    parser.add_argument("--output-dir", dest="output_dir", help="output directory")
+    parser.add_argument("-o", "--output-dir", dest="output_dir", help="output directory")
     args = parser.parse_args()
 
     if args.output_dir:

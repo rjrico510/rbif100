@@ -31,7 +31,7 @@ def main():
     """
     parser = argparse.ArgumentParser(description="Get crispr candidate sequences")
     parser.add_argument("fasta_dir", help="fasta directory")
-    parser.add_argument("--output-dir", dest="output_dir", help="output directory")
+    parser.add_argument("-o", "--output-dir", dest="output_dir", help="output directory")
     args = parser.parse_args()
 
     if args.output_dir:

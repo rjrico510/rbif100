@@ -31,7 +31,7 @@ def main():
     """
     parser = argparse.ArgumentParser(description="Insert base before PAM")
     parser.add_argument("fasta_dir", help="fasta directory")
-    parser.add_argument("--output-dir", dest="output_dir", help="output directory")
+    parser.add_argument("-o", "--output-dir", dest="output_dir", help="output directory")
     parser.add_argument("--base", help="fasta directory", default="A")
     args = parser.parse_args()
 
