@@ -23,8 +23,6 @@ EXOME_DIR=$2
 OUTPUT_DIR=${3:-$2}
 DEBUG=${4:-"0"}
 
-DEBUG=1 # debugging
-
 # report inputs
 echo "inputs:"
 echo "motif file: ${MOTIFS_FILE}"
@@ -66,7 +64,7 @@ for FASTA_FILE in "$EXOME_DIR"/*.fasta; do
     grep -E -B 1 --no-group-separator "${PATTERN}" "${FASTA_FILE}" > "${OUT_FILE}"
 
     # cleanup
-    if [ "${DEBUG}" != "1" ]; then
+    if [ "${DEBUG}" == "0" ]; then
         rm -f "${MOTIFS_COUNT}"
     fi
 done
