@@ -69,6 +69,9 @@ The following commands will run the assignment:
 - All sequences in fasta files are on a single line
 - There is no special handling of cases where an NGG falls inside the 20-base upstream region
   - i.e. there is no affordances made for overlapping search hits
+  - the code will search left to right, insert the new base at the first hit, and resume from the end of the hit. e.g.
+    - ACCTTCTTACAACATTATAACAGAGGGTTTACACCTCATGG becomes
+    - ACCTTCTTACAACATTATAACAGAAGGGTTTACACCTCATGG
 
 ## Contents
 
