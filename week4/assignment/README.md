@@ -31,6 +31,7 @@ Create the following scripts:
 - exomeReport.py: generate a report containing:
   - summary information for each exome that passed the initial filtering criteria
   - a count and list of the union of all genes identified as having crispr sites
+  - run `python3 exomeReport.py -h` for help
 
 ## Usage
 
