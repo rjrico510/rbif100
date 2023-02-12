@@ -31,6 +31,7 @@ Create the following scripts:
 - exomeReport.py: generate a report containing:
   - summary information for each exome that passed the initial filtering criteria
   - a count and list of the union of all genes identified as having crispr sites
+  - run `python3 exomeReport.py -h` for help
 
 ## Usage
 
@@ -103,3 +104,4 @@ The following commands will run the assignment:
 - The scripts specifically look for fastas named by their preceding scripts, e.g. identifyCrisprSite.sh specifically looks for files matching "*_topmotifs.fasta".
   - This allows all the data to be written to the same directory if desired.
   - This helps ensure each script only reads in fastas which are relevant.
+- I took a stab at using python typing as I have not used it before.
