@@ -104,3 +104,4 @@ The following commands will run the assignment:
 - The scripts specifically look for fastas named by their preceding scripts, e.g. identifyCrisprSite.sh specifically looks for files matching "*_topmotifs.fasta".
   - This allows all the data to be written to the same directory if desired.
   - This helps ensure each script only reads in fastas which are relevant.
+- I took a stab at using python typing as I have not used it before.
