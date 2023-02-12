@@ -39,6 +39,7 @@ import argparse
 import csv
 import os
 import sys
+import typing
 
 REPORT_DEFAULT = "exomeReport.txt"
 
@@ -50,9 +51,14 @@ HEADER_ENVIRONMENT = "Environment"
 
 FASTA_SUFFIX = "_postcrispr.fasta"
 
-def main():
-    """main
+
+def parse_arguments() -> argparse.Namespace:
+    """Parses input arguments
+
+    Returns:
+        argparse.Namespace: argument object
     """
+
     parser = argparse.ArgumentParser("Exome Cohort report")
     parser.add_argument("clinical_txt", help = "clinical data file")
     parser.add_argument("exome_dir", help = "Post-processed CRISPR data directory")
@@ -77,44 +83,67 @@ def main():
         print(f"{args.report} already exists.  Use --force to overwrite.  Exiting...")
         sys.exit(2)
 
-    #
-    # process data
-    #
+    return args
 
-    # get all the exomes present from the fasta names
+
+def generate_summary(fo: typing.TextIO, clinical_txt: str, exomes: typing.List[str]) -> None:
+    """Generate summary portion of report
+
+    Args:
+        fo (IO): file-like object to write to
+        clinical_txt (str): clinical text file input
+        exomes (list): list of exome names
+    """
+    with open(clinical_txt) as f:
+        dialect = csv.Sniffer().sniff(f.read(1024))
+        f.seek(0)
+        reader = csv.DictReader(f, dialect=dialect)
+        for line in reader:
+            if line[HEADER_CODENAME] in exomes:
+                msg = f"Organism {line[HEADER_CODENAME]}, discovered by {line[HEADER_DISCOVERER]}, has a diameter of {line[HEADER_DIAMETER]}, and is from the environment {line[HEADER_ENVIRONMENT]}\n"
+                fo.write(msg)
+
+def generate_genelist(fo: typing.TextIO, exome_dir: str, fasta_filenames: typing.List[str]) -> None:
+    """Generate gene list portion of the report
+
+    Args:
+        fo (typing.TextIO): file-like object to write to
+        exome_dir (str): path to exome directory
+        fasta_filenames (typing.List[str]): list of fasta filenames in the exome directory
+    """
+    # - get list of all genes - iterate through all files
+    genes = set()
+    for fasta_filename in fasta_filenames:
+        with open(os.path.join(exome_dir, fasta_filename)) as ff:
+            for line in ff:
+                if line.startswith(">"):
+                    genes.add(line.strip()[1:])
+    num_genes = len(genes)
+
+    # - print to summary (sort the list)
+    gene_list = [(g, int(g.replace("gene", ""))) for g in genes]
+    gene_list = [g[0] for g in sorted(gene_list, key=lambda x: x[1])]
+
+    all_genes = ','.join(gene_list)
+    fo.write(f"The number of the union of genes across the cohort is {num_genes}.  Those genes are:\n")
+    fo.write(f"{all_genes}\n")
+
+
+def main():
+    """main
+    """
+    # get & validate input
+    args = parse_arguments()
+
+    # get all the exomes present from the fasta names (once rather than every iteration)
     fasta_filenames = [f for f in os.listdir(args.exome_dir) if f.endswith(FASTA_SUFFIX)]
     exomes = [f.split("_")[0] for f in fasta_filenames]
 
-
     with  open(args.report, 'w') as fo:
-
         # generate the summary section - report exomes
-        with open(args.clinical_txt) as f:
-            dialect = csv.Sniffer().sniff(f.read(1024))
-            f.seek(0)
-            reader = csv.DictReader(f, dialect=dialect)
-            for line in reader:
-                if line[HEADER_CODENAME] in exomes:
-                    msg = f"Organism {line[HEADER_CODENAME]}, discovered by {line[HEADER_DISCOVERER]}, has a diameter of {line[HEADER_DIAMETER]}, and is from the environment {line[HEADER_ENVIRONMENT]}\n"
-                    fo.write(msg)
-
-        # print the union of all genes present in the cohort
-        # - get list of all genes - iterate through all files
-        genes = set()
-        for fasta_filename in fasta_filenames:
-            with open(os.path.join(args.exome_dir, fasta_filename)) as ff:
-                for line in ff:
-                    if line.startswith(">"):
-                        genes.add(line.strip()[1:])
-        num_genes = len(genes)
-
-        # - print to summary (sort the list)
-        gene_list = [(g, int(g.replace("gene", ""))) for g in genes]
-        gene_list = [g[0] for g in sorted(gene_list, key=lambda x: x[1])]
-
-        all_genes = ','.join(gene_list)
-        fo.write(f"The number of the union of genes across the cohort is {num_genes}.  Those genes are:\n")
-        fo.write(f"{all_genes}\n")
+        generate_summary(fo, args.clinical_txt, exomes)
+        # generate the genes section - union of all genes present in the cohort
+        generate_genelist(fo, args.exome_dir, fasta_filenames)
 
 
 if __name__ == "__main__":
