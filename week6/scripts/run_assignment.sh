@@ -1,5 +1,5 @@
 #!/bin/bash -xe
-python3 pipeline.py ../data/assignment/hawkins_pooled_sequences.fastq ../data/assignment/harrington_clinical_data.txt ../data/assignment/dgorgon_reference.fa --fastqs-dir ../analysis/assignment/fastqs --bams-dir ../analysis/assignment/bams --report ../analysis/assignment/report.txt --force
+tme python3 pipeline.py ../data/assignment/hawkins_pooled_sequences.fastq ../data/assignment/harrington_clinical_data.txt ../data/assignment/dgorgon_reference.fa --fastqs-dir ../analysis/assignment/fastqs --bams-dir ../analysis/assignment/bams --report ../analysis/assignment/report.txt --reindex --force
 WORKINGDIR="$(pwd)"
 ANALYSIS=assignment
 cd ../analysis/${ANALYSIS}/fastqs

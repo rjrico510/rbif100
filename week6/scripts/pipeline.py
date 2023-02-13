@@ -58,6 +58,8 @@ SAMPLE_HEADER_NAME = "Name"
 SAMPLE_HEADER_COLOR = "Color"
 SAMPLE_HEADER_BC = "Barcode"
 
+TRIMMED_FASTQ = "_trimmed.fastq"
+SORTED_BAM = "_sorted.bam"
 
 #
 # The following code is taken from the week6 necessary_scripts folder
@@ -167,6 +169,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--fastqs-dir",  dest="fastqs_dir", help="output fastq folder", default=FASTQS_DEFAULT)
     parser.add_argument("--bams-dir",  dest="bams_dir", help="output bam folder", default=BAMS_DEFAULT)
     parser.add_argument("--report",  help="output fastq folder", default=REPORT_DEFAULT)
+    parser.add_argument("--reindex", action="store_true", help="force re-indexing of reference")
     parser.add_argument("--force", action="store_true", help="overwrite outputs")
     args = parser.parse_args()
 
@@ -177,6 +180,7 @@ def parse_arguments() -> argparse.Namespace:
     print(f"fastqs dir: {args.fastqs_dir}")
     print(f"bams dir: {args.bams_dir}")
     print(f"report file: {args.report}")
+    print(f"re-index reference: {args.reindex}")
     print(f"force: {args.force}")
 
     #
@@ -198,7 +202,7 @@ def parse_arguments() -> argparse.Namespace:
             else:
                 print(f"Deleting existing {output} ...")
                 if os.path.isdir(output):
-                    rm_tree(output)
+                    _rm_tree(output)
                 else:
                     pathlib.Path(output).unlink()
 
@@ -275,7 +279,7 @@ def create_fastqs(sample_file: str, fastq_file: str, fastqs_dir: str) -> None:
             else:
                 seq_str = read[SEQ][bc_length:]
                 qual_str = read[QUAL][bc_length:]
-            filename = os.path.join(fastqs_dir, f"{name}_trimmed.fastq")
+            filename = os.path.join(fastqs_dir, f"{name}{TRIMMED_FASTQ}")
 
             # write read - append to existing
             # seems like a lot of I/O - might be a better way to do this
@@ -286,19 +290,73 @@ def create_fastqs(sample_file: str, fastq_file: str, fastqs_dir: str) -> None:
             print(f"barcode {bc} has no assigned sample ... skipping")
 
 
-def align_reads(reference: str, fastqs_dir: str, bams_dir: str) -> None:
-    """_summary_
+def align_reads(reference: str, fastqs_dir: str, bams_dir: str, reindex=False) -> None:
+    """aligns reads for each fastq and generate a SAM file
+
+        - if index file fa.amb exists, assume the index is already generated
 
     Args:
-        reference (str): _description_
-        fastqs_dir (str): _description_
-        bams_dir (str): _description_
+        reference (str): reference fasta
+        fastqs_dir (str): input trimmed fastqs (filename convention: name_trimmed.fastq)
+        bams_dir (str): output folder (filename convention: name.sam)
+        reindex (bool): force reference re-index (default False)
     """
-    # index reference
-    cmd = ["bwa", "index", reference]
+
+    # setup
+    os.makedirs(bams_dir)
+    exitcode = 4
+
+    # index reference (if needed)
+    if not os.path.exists(reference + ".amb") or reindex:
+        print("generate index...")
+        cmd = ["bwa", "index", reference]
+        _run_subprocess(cmd, exitcode, None)
+    
+    # call bwa mem on every trimmed fastq - write to a SAM file
+    for fastq_filename in [f for f in os.listdir(fastqs_dir) if f.endswith(TRIMMED_FASTQ)]:
+        name = fastq_filename.split("_")[0]
+        cmd = ["bwa", "mem", reference, os.path.join(fastqs_dir, fastq_filename)]
+        samfile = os.path.join(bams_dir, f"{name}.sam")
+        with open(samfile, "w") as f:
+            _run_subprocess(cmd, exitcode, f)
+
 
 def sam_to_bam(bams_dir: str) -> None:
-    pass
+    """Converr sam files to sorted, indexed bam files
+
+    Takes a directory of sam files
+    For each sam file
+    (1) converts to bam file and deletes the sam file
+    (2) sorts and indexes the bam file and deletes the unsorted bam file
+
+    Deletion occurs immediately to minimize disk usage.
+
+    Args:
+        bams_dir (str): working directory of sam/bam files
+    """
+    exitcode = 5
+    for sam_filename in [f for f in os.listdir(bams_dir) if f.endswith(".sam")]:
+        # get filenames
+        name = os.path.splitext(sam_filename)[0]
+        samfile = os.path.join(bams_dir, sam_filename)
+        bamfile = os.path.join(bams_dir, f"{name}.bam")
+        sorted_bamfile = os.path.join(bams_dir, f"{name}{SORTED_BAM}")
+
+        # SAM to BAM
+        cmd = ["samtools", "view", "-bS", samfile]
+        with open(bamfile, 'w') as f:
+            _run_subprocess(cmd, exitcode, f)
+        pathlib.Path(samfile).unlink()
+        
+        # sort BAM
+        cmd = ["samtools", "sort", "-m", "100M", "-o", sorted_bamfile, bamfile]
+        _run_subprocess(cmd, exitcode, None)
+        pathlib.Path(bamfile).unlink()
+
+        # index BAM
+        cmd = ["samtools", "index", sorted_bamfile]
+        _run_subprocess(cmd, exitcode, None)
+
 
 def call_variants(bams_dir: str) -> dict:
     return {}
@@ -320,7 +378,7 @@ class BCLengthException(Exception):
 # helper methods
 #
 
-def rm_tree(pth):
+def _rm_tree(pth):
     """delete a directory and all contents
     https://stackoverflow.com/questions/50186904/pathlib-recursively-remove-directory
 
@@ -334,17 +392,42 @@ def rm_tree(pth):
         if child.is_file():
             child.unlink()
         else:
-            rm_tree(child)
+            _rm_tree(child)
     pth.rmdir()
+
+def _run_subprocess(cmd, exitcode=1, stdout=None):
+    """run a subprocess
+
+    Require a list of strings to avoid using shell=True
+    for security reasons
+
+    Args:
+        cmd (list): command as a list of strings
+        exitcode (int, optional): exit code. Defaults to 1.
+        stdout (file, optional): file-type object. Defaults to None.
+    """
+    cmdstring = ' '.join(cmd)
+    print(f"running {cmdstring}...")
+    try:
+        subprocess.run(cmd, check=True, stdout=stdout)
+    except subprocess.CalledProcessError:
+        print(f"{cmdstring} failed")
+        sys.exit(exitcode)
 
 def main():
     """main
     """
+    print("-- Parsing and validating input --")
     args = parse_arguments()
+    print("-- Creating demultiplexed trimmed fastqs --")
     create_fastqs(args.samples, args.fastq, args.fastqs_dir)
+    print("-- Aligning reads --")
     align_reads(args.reference, args.fastqs_dir, args.bams_dir)
+    print("-- Creating sorted indexed bam files --")
     sam_to_bam(args.bams_dir)
+    print("-- Calling variants --")
     results = call_variants(args.bams_dir)
+    print("-- Generating report --")
     generate_report(results, args.report)
 
 
