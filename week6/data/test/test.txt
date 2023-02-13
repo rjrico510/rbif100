@@ -1,0 +1,3 @@
+Name	Color	Barcode
+Abbey	Black	GCAGA
+Adelaide	Orange	CTTGA
