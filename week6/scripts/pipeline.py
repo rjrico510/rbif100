@@ -33,7 +33,7 @@ e.g.
 
 
 inputs:
-(1) sample file - tab-delimited file with headers: name, color, barcode
+(1) sample file - tab-delimited file with headers: Name, Color, Barcode
 (2) fastq - sequencing data with leading barcode
 (3) fasta reference - reference sequence for alignment & variant calling
 
@@ -44,10 +44,19 @@ outputs:
 """
 
 import argparse
+import csv
 import gzip
 import os
 import pysam
+import pathlib
+import re
+import subprocess
 import sys
+
+# sample file headers
+SAMPLE_HEADER_NAME = "Name"
+SAMPLE_HEADER_COLOR = "Color"
+SAMPLE_HEADER_BC = "Barcode"
 
 
 #
@@ -67,9 +76,9 @@ class ParseFastQ(object):
         rec is tuple: (seqHeader,seqStr,qualHeader,qualStr)
         """
         if filePath.endswith('.gz'):
-            self._file = gzip.open(filePath)
+            self._file = gzip.open(filePath, 'rt')
         else:
-            self._file = open(filePath, 'rU')
+            self._file = open(filePath, 'r')
         self._currentLineNumber = 0
         self._hdSyms = headerSymbols
          
@@ -161,6 +170,15 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--force", action="store_true", help="overwrite outputs")
     args = parser.parse_args()
 
+    # echo inputs
+    print(f"sequencing fastq: {args.fastq}")
+    print(f"sample file: {args.samples}")
+    print(f"reference fasta: {args.reference}")
+    print(f"fastqs dir: {args.fastqs_dir}")
+    print(f"bams dir: {args.bams_dir}")
+    print(f"report file: {args.report}")
+    print(f"force: {args.force}")
+
     #
     # input/output validation
     #
@@ -171,20 +189,113 @@ def parse_arguments() -> argparse.Namespace:
             print(f"{input_file} not found.  Exiting...")
             sys.exit(1)
 
-    # don't overwrite existing intermediates/outputs
+    # don't overwrite existing intermediates/outputs unless forced
     for output in [args.fastqs_dir, args.bams_dir, args.report]:
-        if os.path.exists(output) and not args.force:
-            print(f"{output} already exists.  Use --force to overwrite.  Exiting...")
-            sys.exit(2)
+        if os.path.exists(output):
+            if not args.force:
+                print(f"{output} already exists.  Use --force to overwrite.  Exiting...")
+                sys.exit(2)
+            else:
+                print(f"Deleting existing {output} ...")
+                if os.path.isdir(output):
+                    rm_tree(output)
+                else:
+                    pathlib.Path(output).unlink()
 
     return args
 
 
+def verify_prequisites():
+    """Verify required third-party applications are present
+    """
+    for app in ["bwa", "samtools"]:
+        cmd = ["which", app]
+        try:
+            subprocess.run(cmd, check=True)
+        except subprocess.CalledProcessError:
+            print("{}: not found .. exiting")
+            sys.exit(3)
+            
+
 def create_fastqs(sample_file: str, fastq_file: str, fastqs_dir: str) -> None:
-    pass
+    """demultplex a fastq by barcode; trim barcodes and low-quality bases
+       (1st occurrence of consecutive D/F quality scores)
+       and write the new per-barcode fastqs named <name>_trimmed.fastq
+       to the output folder. (name = Name field from sample file)
+    
+       - Assumes barcodes are of the same length - will raise an exception otherwise
+       - Assumes barcodes start at the beginning of the read
+       - Skips barcodes with no assigned name
+
+    Args:
+        sample_file (str): tab-delimited file of sample name, color and barcode
+        fastq_file (str): fastqs input sequence data
+        fastqs_dir (str): output folder of fastqs
+    """
+
+    regex = re.compile(r'[DF]{2}') # low quality
+    SEQHEADER = 0
+    SEQ = 1
+    QUALHEADER = 2
+    QUAL = 3
+
+    # setup
+    bc_name = {}
+    with open(sample_file) as f:
+        dialect = csv.Sniffer().sniff(f.read(1024))
+        f.seek(0)
+        reader = csv.DictReader(f, dialect=dialect)
+        bc_lengths = set()
+        for line in reader:
+            bc_name[line[SAMPLE_HEADER_BC]] = line[SAMPLE_HEADER_NAME]
+            bc_lengths.add(len(line[SAMPLE_HEADER_BC]))
+
+        if len(bc_lengths) > 1:
+            raise BCLengthException(f"{sample_file} has barcode lengths {','.join((str(bcl) for bcl in bc_lengths))}")
+
+    bc_length = list(bc_lengths)[0]
+
+    fastq_parser = ParseFastQ(fastq_file)
+    os.makedirs(fastqs_dir)
+
+    # parse sequence data one read at a time
+    for read in fastq_parser:
+        # get the barcode
+        bc = read[SEQ][:bc_length]
+        name = bc_name.get(bc)
+        if name:
+            # find low-quality bases
+            match = regex.search(read[QUAL])
+            end_pos = match.start() if match else None
+
+            # trim
+            if end_pos:
+                seq_str = read[SEQ][bc_length:end_pos]
+                qual_str = read[QUAL][bc_length:end_pos]
+            else:
+                seq_str = read[SEQ][bc_length:]
+                qual_str = read[QUAL][bc_length:]
+            filename = os.path.join(fastqs_dir, f"{name}_trimmed.fastq")
+
+            # write read - append to existing
+            # seems like a lot of I/O - might be a better way to do this
+            with open(filename, "a+") as f:
+                for read_line in (read[SEQHEADER], seq_str, read[QUALHEADER], qual_str):
+                    f.write(f"{read_line}\n")
+        else:
+            print(f"barcode {bc} has no assigned sample ... skipping")
+
 
 def align_reads(reference: str, fastqs_dir: str, bams_dir: str) -> None:
-    pass
+    """_summary_
+
+    Args:
+        reference (str): _description_
+        fastqs_dir (str): _description_
+        bams_dir (str): _description_
+    """
+    # index reference
+    cmd = ["bwa", "index", reference]
 
 def sam_to_bam(bams_dir: str) -> None:
     pass
@@ -196,29 +307,45 @@ def generate_report(results: dict, report_file: str) -> None:
     pass
 
 
+class BCLengthException(Exception):
+    """exception if barcodes are not all the same length
+
+    Args:
+        Exception (Exception): exception
+    """
+    pass
+
+
+#
+# helper methods
+#
+
+def rm_tree(pth):
+    """delete a directory and all contents
+    https://stackoverflow.com/questions/50186904/pathlib-recursively-remove-directory
+
+    using python 3 pathlib instead of shutil
+
+    Args:
+        pth (str): path to a directory
+    """
+    pth = pathlib.Path(pth)
+    for child in pth.glob('*'):
+        if child.is_file():
+            child.unlink()
+        else:
+            rm_tree(child)
+    pth.rmdir()
 
 def main():
     """main
     """
-    # get & validate input
     args = parse_arguments()
-
-    # create fastqs
     create_fastqs(args.samples, args.fastq, args.fastqs_dir)
-
-    # align reads
     align_reads(args.reference, args.fastqs_dir, args.bams_dir)
-
-
-    # create sorted BAMs
     sam_to_bam(args.bams_dir)
-
-    # call variants
     results = call_variants(args.bams_dir)
-
-    # generate report
-    generate_report(results)
-
+    generate_report(results, args.report)
 
 
 if __name__ == "__main__":
