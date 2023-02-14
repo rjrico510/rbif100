@@ -439,6 +439,9 @@ def call_variants(bams_dir: str, reference: str) -> dict:
         bams_dir (str): bam file directory (name_sorted.bam)
         reference (str): reference fasta path
 
+    One could in principle get the wildtype from the bam file MD tag
+    which would mitigate the need to read the reference
+
     Returns:
         dict: dictionary of {name: list of VariantFrequency tuples}
     """
@@ -473,20 +476,23 @@ def call_variants(bams_dir: str, reference: str) -> dict:
         print(f"Processing {bam_filename}...")
         bamfile = os.path.join(bams_dir, bam_filename)
         name = bam_filename.split("_")[0]
+        # run the pileup method to get position/# reads/frequencies
         bam_variants = pileup(bamfile)
+
+        # convert each variant into a NamedTuple (add wildtype & mutation)
         if bam_variants:
-            variants_with_wildtype = []
+            variants_complete = []
             for (position, nreads, frequencies) in bam_variants:
                 wildtype = reference_sequence[position]
                 mutation = _get_mutation_base(wildtype, frequencies)
-                variants_with_wildtype.append(VariantFrequency(
+                variants_complete.append(VariantFrequency(
                     position=position,
                     nreads=nreads,
                     wildtype=wildtype,
                     mutation=mutation,
                     frequencies=frequencies
                 ))
-            sample_variants[name] = variants_with_wildtype
+            sample_variants[name] = variants_complete
 
     pp = pprint.PrettyPrinter(indent=4)
     pp.pprint(sample_variants)
