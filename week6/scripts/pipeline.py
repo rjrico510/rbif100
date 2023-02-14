@@ -492,6 +492,7 @@ def call_variants(bams_dir: str, reference: str) -> dict:
     pp.pprint(sample_variants)
     return sample_variants
 
+
 def generate_report(variants: dict, samples: SampleFile, report_file: str) -> None:
     """Generate variants report
 
