@@ -135,6 +135,8 @@ class VariantFrequency(typing.NamedTuple):
     """
     position: int
     nreads: int
+    wildtype: str
+    mutation: str
     frequencies: tuple
 
 #
@@ -212,7 +214,7 @@ def pileup(indexed_bam_file: str) -> list:
         indexed_bam_file (str): path to indexed bam file
 
     Returns:
-        list: list of named tuples (VariantFrequency) specifying variant frequency
+        list: tuples (position, # reads, frequencies)
     """
     samfile = pysam.AlignmentFile(indexed_bam_file, "rb")
     variants = []
@@ -235,9 +237,7 @@ def pileup(indexed_bam_file: str) -> list:
         if len(ntdict) > 1: # found more than 1 base at the position
             # need position, count, and base frequency
             frequencies = [(base, ntdict[base]/pileupcolumn.n) for base in ["A", "C", "T", "G"]]
-            variants.append(VariantFrequency(position=pileupcolumn.pos,
-                                             nreads=pileupcolumn.n,
-                                             frequencies=tuple(frequencies)))
+            variants.append((pileupcolumn.pos, pileupcolumn.n, tuple(frequencies)))
              
     samfile.close()
 
@@ -432,42 +432,15 @@ def sam_to_bam(bams_dir: str) -> None:
         _run_subprocess(cmd, None)
 
 
-def call_variants(bams_dir: str) -> dict:
+def call_variants(bams_dir: str, reference: str) -> dict:
     """Reports bases for each bam where there is more than 1 base at a position
 
     Args:
         bams_dir (str): bam file directory (name_sorted.bam)
+        reference (str): reference fasta path
 
     Returns:
         dict: dictionary of {name: list of VariantFrequency tuples}
-    """
-    sample_variants = {}
-    for bam_filename in [f for f in os.listdir(bams_dir) if f.endswith(SORTED_BAM)]:
-        print(f"Processing {bam_filename}...")
-        bamfile = os.path.join(bams_dir, bam_filename)
-        name = bam_filename.split("_")[0]
-        bam_variants = pileup(bamfile)
-        if bam_variants:
-            sample_variants[name] = bam_variants
-
-    pp = pprint.PrettyPrinter(indent=4)
-    pp.pprint(sample_variants)
-    return sample_variants
-
-def generate_report(variants: dict, reference: str, samples: SampleFile, report_file: str) -> None:
-    """Generate variants report
-
-    - Iterates through all variants by color, and reports each variant.   (Assumes only 1 mutation base)
-    - Iterates through all samples, and reports each variant.
-
-    Code does not assume only 1 variant per color or sample
-    (although the reporting text would be admittedly odd in that case)
-
-    Args:
-        variants (dict): dictionary of {name:list[VariantCalls]}
-        reference (str): reference fasta path
-        samples (SampleFile): sample object
-        report_file (str): path to write report
     """
 
     def _get_mutation_base(wildtype: str, frequencies: tuple) -> str:
@@ -480,25 +453,59 @@ def generate_report(variants: dict, reference: str, samples: SampleFile, report_
             frequencies (tuple): (base, frequency)
 
         Returns:
-            tuple: (mutation, mutation_frequency))
+            str: mutation
         """
         mutation = None
         for (base, frequency) in frequencies:
             if base != wildtype and frequency > 0:
                 mutation = base
-                mutation_frequency = frequency
                 break
-
         assert(mutation is not None) # you must have one mutation
-
-        return (mutation, mutation_frequency)
-    
+        return mutation
 
     # get the reference (for wildtype data)
     with open(reference) as f:
         f.readline() # skip header
         reference_sequence = f.readline().strip()
 
+    sample_variants = {}
+    for bam_filename in [f for f in os.listdir(bams_dir) if f.endswith(SORTED_BAM)]:
+        print(f"Processing {bam_filename}...")
+        bamfile = os.path.join(bams_dir, bam_filename)
+        name = bam_filename.split("_")[0]
+        bam_variants = pileup(bamfile)
+        if bam_variants:
+            variants_with_wildtype = []
+            for (position, nreads, frequencies) in bam_variants:
+                wildtype = reference_sequence[position]
+                mutation = _get_mutation_base(wildtype, frequencies)
+                variants_with_wildtype.append(VariantFrequency(
+                    position=position,
+                    nreads=nreads,
+                    wildtype=wildtype,
+                    mutation=mutation,
+                    frequencies=frequencies
+                ))
+            sample_variants[name] = variants_with_wildtype
+
+    pp = pprint.PrettyPrinter(indent=4)
+    pp.pprint(sample_variants)
+    return sample_variants
+
+def generate_report(variants: dict, samples: SampleFile, report_file: str) -> None:
+    """Generate variants report
+
+    - Iterates through all variants by color, and reports each variant.
+    - Iterates through all samples, and reports each variant.
+
+    Code does not assume only 1 variant per color or sample
+    (although the reporting text would be admittedly odd in that case)
+
+    Args:
+        variants (dict): dictionary of {name:list[VariantCalls]}
+        samples (SampleFile): sample object
+        report_file (str): path to write report
+    """
     # write the report
     with open(report_file, "w") as f:
 
@@ -510,15 +517,12 @@ def generate_report(variants: dict, reference: str, samples: SampleFile, report_
 
             unique_variants = []
             for color_variant in color_variants:
-                wildtype = reference_sequence[color_variant.position]
-                (mutation, _) = _get_mutation_base(wildtype, color_variant.frequencies)
-                variant_tuple = (color, color_variant.position, wildtype, mutation)
+                variant_tuple = (color_variant.position, color_variant.wildtype, color_variant.mutation)
                 if variant_tuple not in unique_variants:
                     unique_variants.append(variant_tuple)
             
-            print(f"# unique variants for {color}: {str(len(unique_variants))}")
-            for unique_variant in unique_variants:
-                msg = f"The {unique_variant[0]} mold was caused by a mutation in position {unique_variant[1]}.  The wildtype base was {unique_variant[2]} and the mutation was {unique_variant[3]}\n"
+            for (position, wildtype, mutation) in unique_variants:
+                msg = f"The {color} mold was caused by a mutation in position {position}.  The wildtype base was {wildtype} and the mutation was {mutation}\n"
                 f.write(msg)
 
         f.write("\n")
@@ -527,22 +531,12 @@ def generate_report(variants: dict, reference: str, samples: SampleFile, report_
         for name in samples.name_color.keys():
             color = samples.name_color[name]
             for variant in variants[name]:
-                wildtype = reference_sequence[variant.position]
-                (mutation, mutation_frequency) = _get_mutation_base(wildtype, variant.frequencies)
-                msg = f"Sample {name} had a {color} mold, {variant.nreads} reads, and had {mutation_frequency:.0%} of the reads at position {variant.position} had the mutation {mutation}\n"
+                for base, frequency in variant.frequencies:
+                    if base == variant.mutation:
+                        mutation_frequency = frequency
+                        break
+                msg = f"Sample {name} had a {color} mold, {variant.nreads} reads, and had {mutation_frequency:.0%} of the reads at position {variant.position} had the mutation {variant.mutation}\n"
                 f.write(msg)
-
-
-    
-             
-
-
-
-
-
-    
-    
-
 
 
 #
@@ -604,9 +598,9 @@ def main():
     print("-- Create sorted indexed bam files --")
     sam_to_bam(args.bams_dir)
     print("-- Call variants --")
-    variants = call_variants(args.bams_dir)
+    variants = call_variants(args.bams_dir, args.reference)
     print("-- Generate report --")
-    generate_report(variants, args.reference, samples, args.report)
+    generate_report(variants, samples, args.report)
 
 
 if __name__ == "__main__":
