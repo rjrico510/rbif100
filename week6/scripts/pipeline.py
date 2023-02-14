@@ -44,25 +44,101 @@ outputs:
 """
 
 import argparse
+import collections
 import csv
 import gzip
 import os
+import pprint
 import pysam
 import pathlib
 import re
 import subprocess
 import sys
-
-# sample file headers
-SAMPLE_HEADER_NAME = "Name"
-SAMPLE_HEADER_COLOR = "Color"
-SAMPLE_HEADER_BC = "Barcode"
+import typing
 
 TRIMMED_FASTQ = "_trimmed.fastq"
 SORTED_BAM = "_sorted.bam"
 
 #
-# The following code is taken from the week6 necessary_scripts folder
+# class & exception definitions
+#
+
+class SampleFile():
+    """representation of sample file
+    """
+
+    SAMPLE_HEADER_NAME = "Name"
+    SAMPLE_HEADER_COLOR = "Color"
+    SAMPLE_HEADER_BC = "Barcode"
+
+    def __init__(self, sample_file):
+        """constructor
+
+        Parses the file and saves some fields about the data.
+        Assumes the file isn't very big.
+
+        Args:
+            sample_file (str): sample file path
+
+        Raises:
+            BCLengthException: if there is more than 1 barcode length
+        """
+        self._bc_name = {}
+        self._name_color = {}
+        self._color_names = collections.defaultdict(list)
+        with open(sample_file) as f:
+            dialect = csv.Sniffer().sniff(f.read(1024))
+            f.seek(0)
+            reader = csv.DictReader(f, dialect=dialect)
+            bc_lengths = set()
+            for line in reader:
+                self._name_color[line[self.SAMPLE_HEADER_NAME]] = line[self.SAMPLE_HEADER_COLOR]
+                self._color_names[line[self.SAMPLE_HEADER_COLOR]].append(line[self.SAMPLE_HEADER_NAME])
+                self._bc_name[line[self.SAMPLE_HEADER_BC]] = line[self.SAMPLE_HEADER_NAME]
+                bc_lengths.add(len(line[self.SAMPLE_HEADER_BC]))
+
+            if len(bc_lengths) > 1:
+                raise BCLengthException(f"{sample_file} has barcode lengths {','.join((str(bcl) for bcl in bc_lengths))}")
+
+        self._bc_length = list(bc_lengths)[0]
+
+        print(self.bc_length)
+        print(self.bc_name)
+        print(self.name_color)
+
+    @property
+    def bc_length(self):
+        return self._bc_length
+
+    @property
+    def bc_name(self):
+        return self._bc_name
+
+    @property
+    def name_color(self):
+        return self._name_color
+    
+    @property
+    def color_names(self):
+        return self._color_names
+
+class BCLengthException(Exception):
+    """exception if barcodes are not all the same length
+
+    Args:
+        Exception (Exception): exception
+    """
+    pass
+
+class VariantFrequency(typing.NamedTuple):
+    """representation of a variant position
+    """
+    position: int
+    nreads: int
+    frequencies: tuple
+
+#
+# code from the week6 necessary_scripts folder
 #
 
 class ParseFastQ(object):
@@ -124,32 +200,53 @@ class ParseFastQ(object):
         # ++++ Return fatsQ data as tuple ++++
         return tuple(elemList)
 
-#
-# The following code is taken from the week6 necessary_scripts folder
-#
 
 def pileup(indexed_bam_file):
-    #test file, replaced with the sorted.bam you are using. Make sure it is indexed! (Use samtools index yourbam.sorted.bam)
+    """Generate pileup and identify positons where > 1 base is present
+
+    Iterate through the columns of a pileup, and count the number of bases of each type at each position.
+    If more than one base is observed, create a tuple of position, # reads, & base frequency
+    and add it to a list of such tuples
+
+    Args:
+        indexed_bam_file (str): path to indexed bam file
+
+    Returns:
+        list: list of named tuples (VariantFrequency) specifying variant frequency
+    """
     samfile = pysam.AlignmentFile(indexed_bam_file, "rb")
+    variants = []
 
     #Since our reference only has a single sequence, we're going to pile up ALL of the reads. Usually you would do it in a specific region (such as chromosome 1, position 1023 to 1050 for example)
     for pileupcolumn in samfile.pileup():
         print ("coverage at base %s = %s" % (pileupcolumn.pos, pileupcolumn.n))
-        #use a dictionary to count up the bases at each position
-        ntdict = {}
+        #use a dictionary to count up the bases at each position (auto-intialized to 0)
+        ntdict = collections.defaultdict(int)
         for pileupread in pileupcolumn.pileups:
             if not pileupread.is_del and not pileupread.is_refskip:
                 # You can uncomment the below line to see what is happening in the pileup. 
-                # print ('\tbase in read %s = %s' % (pileupread.alignment.query_name, pileupread.alignment.query_sequence[pileupread.query_position]))
+                #print ('\tbase in read %s = %s' % (pileupread.alignment.query_name, pileupread.alignment.query_sequence[pileupread.query_position]))
                 base = pileupread.alignment.query_sequence[pileupread.query_position]
-                ########## ADD ADDITIONAL CODE HERE ############# 
-                # Populate the ntdict with the counts of each base 
+                # Populate the ntdict with the counts of each base
                 # This dictionary will hold all of the base read counts per nucletoide per position.
                 # Use the dictionary to calculate the frequency of each site, and report it if if the frequency is NOT  100% / 0%. 
-                #############################################
+                ntdict[base] += 1
         print (ntdict)
+        if len(ntdict) > 1: # found more than 1 base at the position
+            # need position, count, and base frequency
+            frequencies = [(base, ntdict[base]/pileupcolumn.n) for base in ["A", "C", "T", "G"]]
+            variants.append(VariantFrequency(position=pileupcolumn.pos,
+                                             nreads=pileupcolumn.n,
+                                             frequencies=tuple(frequencies)))
+             
     samfile.close()
 
+    return variants
+
+
+#
+# top-level functions
+#
 
 def parse_arguments() -> argparse.Namespace:
     """Parses input arguments
@@ -198,7 +295,7 @@ def parse_arguments() -> argparse.Namespace:
         if os.path.exists(output):
             if not args.force:
                 print(f"{output} already exists.  Use --force to overwrite.  Exiting...")
-                sys.exit(2)
+                sys.exit(1)
             else:
                 print(f"Deleting existing {output} ...")
                 if os.path.isdir(output):
@@ -209,19 +306,15 @@ def parse_arguments() -> argparse.Namespace:
     return args
 
 
-def verify_prequisites():
+def verify_prerequisites():
     """Verify required third-party applications are present
     """
     for app in ["bwa", "samtools"]:
         cmd = ["which", app]
-        try:
-            subprocess.run(cmd, check=True)
-        except subprocess.CalledProcessError:
-            print("{}: not found .. exiting")
-            sys.exit(3)
-            
+        _run_subprocess(cmd, None)
 
-def create_fastqs(sample_file: str, fastq_file: str, fastqs_dir: str) -> None:
+
+def create_fastqs(samples: SampleFile, fastq_file: str, fastqs_dir: str) -> None:
     """demultplex a fastq by barcode; trim barcodes and low-quality bases
        (1st occurrence of consecutive D/F quality scores)
        and write the new per-barcode fastqs named <name>_trimmed.fastq
@@ -232,32 +325,19 @@ def create_fastqs(sample_file: str, fastq_file: str, fastqs_dir: str) -> None:
        - Skips barcodes with no assigned name
 
     Args:
-        sample_file (str): tab-delimited file of sample name, color and barcode
+        samples (SampleFile): object representation of sample file
         fastq_file (str): fastqs input sequence data
         fastqs_dir (str): output folder of fastqs
     """
 
+    # setup
     regex = re.compile(r'[DF]{2}') # low quality
+
+    # fastq iterator setup
     SEQHEADER = 0
     SEQ = 1
     QUALHEADER = 2
     QUAL = 3
-
-    # setup
-    bc_name = {}
-    with open(sample_file) as f:
-        dialect = csv.Sniffer().sniff(f.read(1024))
-        f.seek(0)
-        reader = csv.DictReader(f, dialect=dialect)
-        bc_lengths = set()
-        for line in reader:
-            bc_name[line[SAMPLE_HEADER_BC]] = line[SAMPLE_HEADER_NAME]
-            bc_lengths.add(len(line[SAMPLE_HEADER_BC]))
-
-        if len(bc_lengths) > 1:
-            raise BCLengthException(f"{sample_file} has barcode lengths {','.join((str(bcl) for bcl in bc_lengths))}")
-
-    bc_length = list(bc_lengths)[0]
 
     fastq_parser = ParseFastQ(fastq_file)
     os.makedirs(fastqs_dir)
@@ -265,24 +345,20 @@ def create_fastqs(sample_file: str, fastq_file: str, fastqs_dir: str) -> None:
     # parse sequence data one read at a time
     for read in fastq_parser:
         # get the barcode
-        bc = read[SEQ][:bc_length]
-        name = bc_name.get(bc)
+        bc = read[SEQ][:samples.bc_length]
+        name = samples.bc_name.get(bc)
         if name:
-            # find low-quality bases
+            # find starting point for trimming low-quality bases
             match = regex.search(read[QUAL])
             end_pos = match.start() if match else None
 
             # trim
-            if end_pos:
-                seq_str = read[SEQ][bc_length:end_pos]
-                qual_str = read[QUAL][bc_length:end_pos]
-            else:
-                seq_str = read[SEQ][bc_length:]
-                qual_str = read[QUAL][bc_length:]
-            filename = os.path.join(fastqs_dir, f"{name}{TRIMMED_FASTQ}")
+            seq_str = read[SEQ][samples.bc_length:end_pos] if end_pos else read[SEQ][samples.bc_length:]
+            qual_str = read[QUAL][samples.bc_length:end_pos] if end_pos else read[QUAL][samples.bc_length:]
 
             # write read - append to existing
             # seems like a lot of I/O - might be a better way to do this
+            filename = os.path.join(fastqs_dir, f"{name}{TRIMMED_FASTQ}")
             with open(filename, "a+") as f:
                 for read_line in (read[SEQHEADER], seq_str, read[QUALHEADER], qual_str):
                     f.write(f"{read_line}\n")
@@ -304,13 +380,12 @@ def align_reads(reference: str, fastqs_dir: str, bams_dir: str, reindex=False) -
 
     # setup
     os.makedirs(bams_dir)
-    exitcode = 4
 
     # index reference (if needed)
     if not os.path.exists(reference + ".amb") or reindex:
         print("generate index...")
         cmd = ["bwa", "index", reference]
-        _run_subprocess(cmd, exitcode, None)
+        _run_subprocess(cmd, None)
     
     # call bwa mem on every trimmed fastq - write to a SAM file
     for fastq_filename in [f for f in os.listdir(fastqs_dir) if f.endswith(TRIMMED_FASTQ)]:
@@ -318,11 +393,11 @@ def align_reads(reference: str, fastqs_dir: str, bams_dir: str, reindex=False) -
         cmd = ["bwa", "mem", reference, os.path.join(fastqs_dir, fastq_filename)]
         samfile = os.path.join(bams_dir, f"{name}.sam")
         with open(samfile, "w") as f:
-            _run_subprocess(cmd, exitcode, f)
+            _run_subprocess(cmd, f)
 
 
 def sam_to_bam(bams_dir: str) -> None:
-    """Converr sam files to sorted, indexed bam files
+    """Convert sam files to sorted, indexed bam files
 
     Takes a directory of sam files
     For each sam file
@@ -334,7 +409,6 @@ def sam_to_bam(bams_dir: str) -> None:
     Args:
         bams_dir (str): working directory of sam/bam files
     """
-    exitcode = 5
     for sam_filename in [f for f in os.listdir(bams_dir) if f.endswith(".sam")]:
         # get filenames
         name = os.path.splitext(sam_filename)[0]
@@ -345,37 +419,56 @@ def sam_to_bam(bams_dir: str) -> None:
         # SAM to BAM
         cmd = ["samtools", "view", "-bS", samfile]
         with open(bamfile, 'w') as f:
-            _run_subprocess(cmd, exitcode, f)
+            _run_subprocess(cmd, f)
         pathlib.Path(samfile).unlink()
         
         # sort BAM
         cmd = ["samtools", "sort", "-m", "100M", "-o", sorted_bamfile, bamfile]
-        _run_subprocess(cmd, exitcode, None)
+        _run_subprocess(cmd, None)
         pathlib.Path(bamfile).unlink()
 
         # index BAM
         cmd = ["samtools", "index", sorted_bamfile]
-        _run_subprocess(cmd, exitcode, None)
+        _run_subprocess(cmd, None)
 
 
 def call_variants(bams_dir: str) -> dict:
-    return {}
-
-def generate_report(results: dict, report_file: str) -> None:
-    pass
-
-
-class BCLengthException(Exception):
-    """exception if barcodes are not all the same length
+    """Reports bases for each bam where there is more than 1 base at a position
 
     Args:
-        Exception (Exception): exception
+        bams_dir (str): bam file directory (name_sorted.bam)
+
+    Returns:
+        dict: dictionary of {name: list of VariantFrequency tuples}
     """
-    pass
+    sample_variants = {}
+    for bam_filename in [f for f in os.listdir(bams_dir) if f.endswith(SORTED_BAM)]:
+        print(f"Processing {bam_filename}...")
+        bamfile = os.path.join(bams_dir, bam_filename)
+        name = bam_filename.split("_")[0]
+        bam_variants = pileup(bamfile)
+        if bam_variants:
+            sample_variants[name] = bam_variants
+
+    pp = pprint.PrettyPrinter(indent=4)
+    pp.pprint(sample_variants)
+    return sample_variants
+
+def generate_report(variants: dict, reference: str, samples: SampleFile, report_file: str) -> None:
+    with open(reference) as f:
+        reference.readline() # skip header
+        reference_sequence = reference.readline().strip()
+
+
+
+
+    
+    
+
 
 
 #
-# helper methods
+# helper code
 #
 
 def _rm_tree(pth):
@@ -395,40 +488,47 @@ def _rm_tree(pth):
             _rm_tree(child)
     pth.rmdir()
 
-def _run_subprocess(cmd, exitcode=1, stdout=None):
-    """run a subprocess
+def _run_subprocess(cmd, stdout=None):
+    """run a subprocess; exits on failure
 
     Require a list of strings to avoid using shell=True
     for security reasons
 
     Args:
         cmd (list): command as a list of strings
-        exitcode (int, optional): exit code. Defaults to 1.
         stdout (file, optional): file-type object. Defaults to None.
     """
     cmdstring = ' '.join(cmd)
     print(f"running {cmdstring}...")
     try:
         subprocess.run(cmd, check=True, stdout=stdout)
-    except subprocess.CalledProcessError:
-        print(f"{cmdstring} failed")
-        sys.exit(exitcode)
+    except subprocess.CalledProcessError as err:
+        print(f"{cmdstring} failed: {str(err)}")
+        sys.exit(err.returncode)
+
+#
+# main
+#
 
 def main():
     """main
     """
-    print("-- Parsing and validating input --")
+    print("-- Verify prerequisites --")
+    args = verify_prerequisites()
+    print("-- Parse and validate input --")
     args = parse_arguments()
-    print("-- Creating demultiplexed trimmed fastqs --")
-    create_fastqs(args.samples, args.fastq, args.fastqs_dir)
-    print("-- Aligning reads --")
+    print("-- Parse sample file --")
+    samples = SampleFile(args.samples)
+    print("-- Create demultiplexed trimmed fastqs --")
+    create_fastqs(samples, args.fastq, args.fastqs_dir)
+    print("-- Align reads --")
     align_reads(args.reference, args.fastqs_dir, args.bams_dir)
-    print("-- Creating sorted indexed bam files --")
+    print("-- Create sorted indexed bam files --")
     sam_to_bam(args.bams_dir)
-    print("-- Calling variants --")
-    results = call_variants(args.bams_dir)
-    print("-- Generating report --")
-    generate_report(results, args.report)
+    print("-- Call variants --")
+    variants = call_variants(args.bams_dir)
+    print("-- Generate report --")
+    generate_report(variants, args.reference, samples, args.report)
 
 
 if __name__ == "__main__":
