@@ -201,7 +201,7 @@ class ParseFastQ(object):
         return tuple(elemList)
 
 
-def pileup(indexed_bam_file):
+def pileup(indexed_bam_file: str) -> list:
     """Generate pileup and identify positons where > 1 base is present
 
     Iterate through the columns of a pileup, and count the number of bases of each type at each position.
@@ -306,7 +306,7 @@ def parse_arguments() -> argparse.Namespace:
     return args
 
 
-def verify_prerequisites():
+def verify_prerequisites() -> None:
     """Verify required third-party applications are present
     """
     for app in ["bwa", "samtools"]:
@@ -455,9 +455,87 @@ def call_variants(bams_dir: str) -> dict:
     return sample_variants
 
 def generate_report(variants: dict, reference: str, samples: SampleFile, report_file: str) -> None:
+    """Generate variants report
+
+    - Iterates through all variants by color, and reports each variant.   (Assumes only 1 mutation base)
+    - Iterates through all samples, and reports each variant.
+
+    Code does not assume only 1 variant per color or sample
+    (although the reporting text would be admittedly odd in that case)
+
+    Args:
+        variants (dict): dictionary of {name:list[VariantCalls]}
+        reference (str): reference fasta path
+        samples (SampleFile): sample object
+        report_file (str): path to write report
+    """
+
+    def _get_mutation_base(wildtype: str, frequencies: tuple) -> str:
+        """Inner function to get a mutation from a tuple of frequencies
+
+        Assumes exactly one mutation base
+
+        Args:
+            wildtype (str): wildtype base
+            frequencies (tuple): (base, frequency)
+
+        Returns:
+            tuple: (mutation, mutation_frequency))
+        """
+        mutation = None
+        for (base, frequency) in frequencies:
+            if base != wildtype and frequency > 0:
+                mutation = base
+                mutation_frequency = frequency
+                break
+
+        assert(mutation is not None) # you must have one mutation
+
+        return (mutation, mutation_frequency)
+    
+
+    # get the reference (for wildtype data)
     with open(reference) as f:
-        reference.readline() # skip header
-        reference_sequence = reference.readline().strip()
+        f.readline() # skip header
+        reference_sequence = f.readline().strip()
+
+    # write the report
+    with open(report_file, "w") as f:
+
+        # get all the variants for a color
+        for color, names in samples.color_names.items():
+            color_variants = []
+            for name in names:
+                color_variants.extend(variants[name])
+
+            unique_variants = []
+            for color_variant in color_variants:
+                wildtype = reference_sequence[color_variant.position]
+                (mutation, _) = _get_mutation_base(wildtype, color_variant.frequencies)
+                variant_tuple = (color, color_variant.position, wildtype, mutation)
+                if variant_tuple not in unique_variants:
+                    unique_variants.append(variant_tuple)
+            
+            print(f"# unique variants for {color}: {str(len(unique_variants))}")
+            for unique_variant in unique_variants:
+                msg = f"The {unique_variant[0]} mold was caused by a mutation in position {unique_variant[1]}.  The wildtype base was {unique_variant[2]} and the mutation was {unique_variant[3]}\n"
+                f.write(msg)
+
+        f.write("\n")
+
+        # report all the per-sample results
+        for name in samples.name_color.keys():
+            color = samples.name_color[name]
+            for variant in variants[name]:
+                wildtype = reference_sequence[variant.position]
+                (mutation, mutation_frequency) = _get_mutation_base(wildtype, variant.frequencies)
+                msg = f"Sample {name} had a {color} mold, {variant.nreads} reads, and had {mutation_frequency:.0%} of the reads at position {variant.position} had the mutation {mutation}\n"
+                f.write(msg)
+
+
+    
+             
+
 
 
 
