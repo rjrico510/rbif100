@@ -102,10 +102,6 @@ class SampleFile():
 
         self._bc_length = list(bc_lengths)[0]
 
-        print(self.bc_length)
-        print(self.bc_name)
-        print(self.name_color)
-
     @property
     def bc_length(self):
         return self._bc_length
@@ -498,8 +494,6 @@ def call_variants(bams_dir: str, reference: str) -> dict:
                 ))
             sample_variants[name] = variants_complete
 
-    pp = pprint.PrettyPrinter(indent=4)
-    pp.pprint(sample_variants)
     return sample_variants
 
 
