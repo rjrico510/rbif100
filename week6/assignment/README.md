@@ -24,7 +24,7 @@ Create a script `pipeline.py` which performs the following:
 - convert the sam files to sorted bam files and delete the sam files
 - generate pileups via pysam and identify any SNPs
 - generate a report of:
-  - the SNP that caused wach mold color
+  - the SNP that caused each mold color (0-based position)
   - the # sequences per sample and % matching the mutation
 
 ## Usage
