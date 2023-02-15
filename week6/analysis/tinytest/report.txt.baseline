@@ -1,0 +1,5 @@
+The Black mold was caused by a mutation in position 0.  The wildtype base was A and the mutation was T
+The White mold was caused by a mutation in position 216.  The wildtype base was G and the mutation was C
+
+Sample BarBlack had a Black mold, 2 reads, and had 50% of the reads at position 0 had the mutation T
+Sample FooWhite had a White mold, 2 reads, and had 50% of the reads at position 216 had the mutation C

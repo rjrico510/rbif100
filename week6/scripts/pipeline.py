@@ -268,6 +268,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--report",  help="output fastq folder", default=REPORT_DEFAULT)
     parser.add_argument("--reindex", action="store_true", help="force re-indexing of reference")
     parser.add_argument("--force", action="store_true", help="overwrite outputs")
+    parser.add_argument("--savesam", action="store_true", help="save intermediate SAM (debugging)")
     args = parser.parse_args()
 
     # echo inputs
@@ -279,6 +280,7 @@ def parse_arguments() -> argparse.Namespace:
     print(f"report file: {args.report}")
     print(f"re-index reference: {args.reindex}")
     print(f"force: {args.force}")
+    print(f"save intermdiate SAM: {args.savesam}")
 
     #
     # input/output validation
@@ -396,7 +398,7 @@ def align_reads(reference: str, fastqs_dir: str, bams_dir: str, reindex=False) -
             _run_subprocess(cmd, f)
 
 
-def sam_to_bam(bams_dir: str) -> None:
+def sam_to_bam(bams_dir: str, savesam=False) -> None:
     """Convert sam files to sorted, indexed bam files
 
     Takes a directory of sam files
@@ -408,6 +410,7 @@ def sam_to_bam(bams_dir: str) -> None:
 
     Args:
         bams_dir (str): working directory of sam/bam files
+        savesam (bool): do not delete intermediate SAM file (Defaults to False).
     """
     for sam_filename in [f for f in os.listdir(bams_dir) if f.endswith(".sam")]:
         # get filenames
@@ -420,7 +423,8 @@ def sam_to_bam(bams_dir: str) -> None:
         cmd = ["samtools", "view", "-bS", samfile]
         with open(bamfile, 'w') as f:
             _run_subprocess(cmd, f)
-        pathlib.Path(samfile).unlink()
+        if not savesam:
+            pathlib.Path(samfile).unlink()
         
         # sort BAM
         cmd = ["samtools", "sort", "-m", "100M", "-o", sorted_bamfile, bamfile]
@@ -520,7 +524,7 @@ def generate_report(variants: dict, samples: SampleFile, report_file: str) -> No
         for color, names in samples.color_names.items():
             color_variants = []
             for name in names:
-                color_variants.extend(variants[name])
+                color_variants.extend(variants.get(name, []))
 
             unique_variants = []
             for color_variant in color_variants:
@@ -537,7 +541,7 @@ def generate_report(variants: dict, samples: SampleFile, report_file: str) -> No
         # report all the per-sample results
         for name in samples.name_color.keys():
             color = samples.name_color[name]
-            for variant in variants[name]:
+            for variant in variants.get(name, []):
                 for base, frequency in variant.frequencies:
                     if base == variant.mutation:
                         mutation_frequency = frequency
@@ -601,9 +605,9 @@ def main():
     print("-- Create demultiplexed trimmed fastqs --")
     create_fastqs(samples, args.fastq, args.fastqs_dir)
     print("-- Align reads --")
-    align_reads(args.reference, args.fastqs_dir, args.bams_dir)
+    align_reads(args.reference, args.fastqs_dir, args.bams_dir, reindex=args.reindex)
     print("-- Create sorted indexed bam files --")
-    sam_to_bam(args.bams_dir)
+    sam_to_bam(args.bams_dir, savesam=args.savesam)
     print("-- Call variants --")
     variants = call_variants(args.bams_dir, args.reference)
     print("-- Generate report --")
