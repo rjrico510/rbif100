@@ -48,7 +48,6 @@ import collections
 import csv
 import gzip
 import os
-import pprint
 import pysam
 import pathlib
 import re
