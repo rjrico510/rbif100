@@ -259,7 +259,7 @@ def parse_arguments() -> argparse.Namespace:
     FASTQS_DEFAULT = "fastqs"
     BAMS_DEFAULT = "bams"
 
-    parser = argparse.ArgumentParser("Demultiplex and trim reads by barcode")
+    parser = argparse.ArgumentParser(description="Demultiplex and trim reads by barcode")
     parser.add_argument("fastq", help = "barcoded fastq sequence data")
     parser.add_argument("samples", help = "tab-delimited sample file")
     parser.add_argument("reference", help = "fasta reference")
