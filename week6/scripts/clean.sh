@@ -6,6 +6,6 @@ rm -rf ../analysis/${NAME}/bams
 rm -rf ../analysis/${NAME}/fastqs
 rm -f ../analysis/${NAME}/report.txt
 rm -f ../analysis/md5sum_${NAME}_fastqs.txt
-rm -f tmp_${NAME}.txt
+rm -f ${NAME}.out
 
 
