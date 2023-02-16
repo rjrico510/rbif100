@@ -62,9 +62,9 @@ SORTED_BAM = "_sorted.bam"
 # class & exception definitions
 #
 
-class SampleFile():
-    """representation of sample file
-    """
+
+class SampleFile:
+    """representation of sample file"""
 
     SAMPLE_HEADER_NAME = "Name"
     SAMPLE_HEADER_COLOR = "Color"
@@ -91,13 +91,21 @@ class SampleFile():
             reader = csv.DictReader(f, dialect=dialect)
             bc_lengths = set()
             for line in reader:
-                self._name_color[line[self.SAMPLE_HEADER_NAME]] = line[self.SAMPLE_HEADER_COLOR]
-                self._color_names[line[self.SAMPLE_HEADER_COLOR]].append(line[self.SAMPLE_HEADER_NAME])
-                self._bc_name[line[self.SAMPLE_HEADER_BC]] = line[self.SAMPLE_HEADER_NAME]
+                self._name_color[line[self.SAMPLE_HEADER_NAME]] = line[
+                    self.SAMPLE_HEADER_COLOR
+                ]
+                self._color_names[line[self.SAMPLE_HEADER_COLOR]].append(
+                    line[self.SAMPLE_HEADER_NAME]
+                )
+                self._bc_name[line[self.SAMPLE_HEADER_BC]] = line[
+                    self.SAMPLE_HEADER_NAME
+                ]
                 bc_lengths.add(len(line[self.SAMPLE_HEADER_BC]))
 
             if len(bc_lengths) > 1:
-                raise BCLengthException(f"{sample_file} has barcode lengths {','.join((str(bcl) for bcl in bc_lengths))}")
+                raise BCLengthException(
+                    f"{sample_file} has barcode lengths {','.join((str(bcl) for bcl in bc_lengths))}"
+                )
 
         self._bc_length = list(bc_lengths)[0]
 
@@ -112,10 +120,11 @@ class SampleFile():
     @property
     def name_color(self):
         return self._name_color
-    
+
     @property
     def color_names(self):
         return self._color_names
+
 
 class BCLengthException(Exception):
     """exception if barcodes are not all the same length
@@ -123,43 +132,48 @@ class BCLengthException(Exception):
     Args:
         Exception (Exception): exception
     """
+
     pass
 
+
 class VariantFrequency(typing.NamedTuple):
-    """representation of a variant position
-    """
+    """representation of a variant position"""
+
     position: int
     nreads: int
     wildtype: str
     mutation: str
     frequencies: tuple
 
+
 #
 # code from the week6 necessary_scripts folder
 #
 
+
 class ParseFastQ(object):
     """Returns a read-by-read fastQ parser analogous to file.readline()"""
-    def __init__(self,filePath,headerSymbols=['@','+']):
+
+    def __init__(self, filePath, headerSymbols=["@", "+"]):
         """Returns a read-by-read fastQ parser analogous to file.readline().
         Exmpl: parser.next()
         -OR-
         Its an iterator so you can do:
         for rec in parser:
             ... do something with rec ...
- 
+
         rec is tuple: (seqHeader,seqStr,qualHeader,qualStr)
         """
-        if filePath.endswith('.gz'):
-            self._file = gzip.open(filePath, 'rt')
+        if filePath.endswith(".gz"):
+            self._file = gzip.open(filePath, "rt")
         else:
-            self._file = open(filePath, 'r')
+            self._file = open(filePath, "r")
         self._currentLineNumber = 0
         self._hdSyms = headerSymbols
-         
+
     def __iter__(self):
         return self
-     
+
     def __next__(self):
         """Reads in next element, parses, and does minimal verification.
         Returns: tuple: (seqHeader,seqStr,qualHeader,qualStr)"""
@@ -167,12 +181,12 @@ class ParseFastQ(object):
         elemList = []
         for i in range(4):
             line = self._file.readline()
-            self._currentLineNumber += 1 ## increment file position
+            self._currentLineNumber += 1  ## increment file position
             if line:
-                elemList.append(line.strip('\n'))
-            else: 
+                elemList.append(line.strip("\n"))
+            else:
                 elemList.append(None)
-         
+
         # ++++ Check Lines For Expected Form ++++
         trues = [bool(x) for x in elemList].count(True)
         nones = elemList.count(None)
@@ -180,20 +194,29 @@ class ParseFastQ(object):
         if nones == 4:
             raise StopIteration
         # -- Make sure we got 4 full lines of data --
-        assert trues == 4,\
-               "** ERROR: It looks like I encountered a premature EOF or empty line.\n\
-               Please check FastQ file near line number %s (plus or minus ~4 lines) and try again**" % (self._currentLineNumber)
+        assert trues == 4, (
+            "** ERROR: It looks like I encountered a premature EOF or empty line.\n\
+               Please check FastQ file near line number %s (plus or minus ~4 lines) and try again**"
+            % (self._currentLineNumber)
+        )
         # -- Make sure we are in the correct "register" --
-        assert elemList[0].startswith(self._hdSyms[0]),\
-               "** ERROR: The 1st line in fastq element does not start with '%s'.\n\
-               Please check FastQ file near line number %s (plus or minus ~4 lines) and try again**" % (self._hdSyms[0],self._currentLineNumber) 
-        assert elemList[2].startswith(self._hdSyms[1]),\
-               "** ERROR: The 3rd line in fastq element does not start with '%s'.\n\
-               Please check FastQ file near line number %s (plus or minus ~4 lines) and try again**" % (self._hdSyms[1],self._currentLineNumber) 
+        assert elemList[0].startswith(self._hdSyms[0]), (
+            "** ERROR: The 1st line in fastq element does not start with '%s'.\n\
+               Please check FastQ file near line number %s (plus or minus ~4 lines) and try again**"
+            % (self._hdSyms[0], self._currentLineNumber)
+        )
+        assert elemList[2].startswith(self._hdSyms[1]), (
+            "** ERROR: The 3rd line in fastq element does not start with '%s'.\n\
+               Please check FastQ file near line number %s (plus or minus ~4 lines) and try again**"
+            % (self._hdSyms[1], self._currentLineNumber)
+        )
         # -- Make sure the seq line and qual line have equal lengths --
-        assert len(elemList[1]) == len(elemList[3]), "** ERROR: The length of Sequence data and Quality data of the last record aren't equal.\n\
-               Please check FastQ file near line number %s (plus or minus ~4 lines) and try again**" % (self._currentLineNumber) 
-         
+        assert len(elemList[1]) == len(elemList[3]), (
+            "** ERROR: The length of Sequence data and Quality data of the last record aren't equal.\n\
+               Please check FastQ file near line number %s (plus or minus ~4 lines) and try again**"
+            % (self._currentLineNumber)
+        )
+
         # ++++ Return fatsQ data as tuple ++++
         return tuple(elemList)
 
@@ -214,26 +237,28 @@ def pileup(indexed_bam_file: str) -> list:
     samfile = pysam.AlignmentFile(indexed_bam_file, "rb")
     variants = []
 
-    #Since our reference only has a single sequence, we're going to pile up ALL of the reads. Usually you would do it in a specific region (such as chromosome 1, position 1023 to 1050 for example)
+    # Since our reference only has a single sequence, we're going to pile up ALL of the reads. Usually you would do it in a specific region (such as chromosome 1, position 1023 to 1050 for example)
     for pileupcolumn in samfile.pileup():
-        print ("coverage at base %s = %s" % (pileupcolumn.pos, pileupcolumn.n))
-        #use a dictionary to count up the bases at each position (auto-intialized to 0)
+        print("coverage at base %s = %s" % (pileupcolumn.pos, pileupcolumn.n))
+        # use a dictionary to count up the bases at each position (auto-intialized to 0)
         ntdict = collections.defaultdict(int)
         for pileupread in pileupcolumn.pileups:
             if not pileupread.is_del and not pileupread.is_refskip:
-                # You can uncomment the below line to see what is happening in the pileup. 
-                #print ('\tbase in read %s = %s' % (pileupread.alignment.query_name, pileupread.alignment.query_sequence[pileupread.query_position]))
+                # You can uncomment the below line to see what is happening in the pileup.
+                # print ('\tbase in read %s = %s' % (pileupread.alignment.query_name, pileupread.alignment.query_sequence[pileupread.query_position]))
                 base = pileupread.alignment.query_sequence[pileupread.query_position]
                 # Populate the ntdict with the counts of each base
                 # This dictionary will hold all of the base read counts per nucletoide per position.
-                # Use the dictionary to calculate the frequency of each site, and report it if if the frequency is NOT  100% / 0%. 
+                # Use the dictionary to calculate the frequency of each site, and report it if if the frequency is NOT  100% / 0%.
                 ntdict[base] += 1
-        print (ntdict)
-        if len(ntdict) > 1: # found more than 1 base at the position
+        print(ntdict)
+        if len(ntdict) > 1:  # found more than 1 base at the position
             # need position, count, and base frequency
-            frequencies = [(base, ntdict[base]/pileupcolumn.n) for base in ["A", "C", "T", "G"]]
+            frequencies = [
+                (base, ntdict[base] / pileupcolumn.n) for base in ["A", "C", "T", "G"]
+            ]
             variants.append((pileupcolumn.pos, pileupcolumn.n, tuple(frequencies)))
-             
+
     samfile.close()
 
     return variants
@@ -242,6 +267,7 @@ def pileup(indexed_bam_file: str) -> list:
 #
 # top-level functions
 #
+
 
 def parse_arguments() -> argparse.Namespace:
     """Parses input arguments
@@ -254,16 +280,29 @@ def parse_arguments() -> argparse.Namespace:
     FASTQS_DEFAULT = "fastqs"
     BAMS_DEFAULT = "bams"
 
-    parser = argparse.ArgumentParser(description="Demultiplex and trim reads by barcode")
-    parser.add_argument("fastq", help = "barcoded fastq sequence data")
-    parser.add_argument("samples", help = "tab-delimited sample file")
-    parser.add_argument("reference", help = "fasta reference")
-    parser.add_argument("--fastqs-dir",  dest="fastqs_dir", help="output fastq folder", default=FASTQS_DEFAULT)
-    parser.add_argument("--bams-dir",  dest="bams_dir", help="output bam folder", default=BAMS_DEFAULT)
-    parser.add_argument("--report",  help="output fastq folder", default=REPORT_DEFAULT)
-    parser.add_argument("--reindex", action="store_true", help="force re-indexing of reference")
+    parser = argparse.ArgumentParser(
+        description="Demultiplex and trim reads by barcode"
+    )
+    parser.add_argument("fastq", help="barcoded fastq sequence data")
+    parser.add_argument("samples", help="tab-delimited sample file")
+    parser.add_argument("reference", help="fasta reference")
+    parser.add_argument(
+        "--fastqs-dir",
+        dest="fastqs_dir",
+        help="output fastq folder",
+        default=FASTQS_DEFAULT,
+    )
+    parser.add_argument(
+        "--bams-dir", dest="bams_dir", help="output bam folder", default=BAMS_DEFAULT
+    )
+    parser.add_argument("--report", help="output fastq folder", default=REPORT_DEFAULT)
+    parser.add_argument(
+        "--reindex", action="store_true", help="force re-indexing of reference"
+    )
     parser.add_argument("--force", action="store_true", help="overwrite outputs")
-    parser.add_argument("--savesam", action="store_true", help="save intermediate SAM (debugging)")
+    parser.add_argument(
+        "--savesam", action="store_true", help="save intermediate SAM (debugging)"
+    )
     args = parser.parse_args()
 
     # echo inputs
@@ -291,7 +330,9 @@ def parse_arguments() -> argparse.Namespace:
     for output in [args.fastqs_dir, args.bams_dir, args.report]:
         if os.path.exists(output):
             if not args.force:
-                print(f"{output} already exists.  Use --force to overwrite.  Exiting...")
+                print(
+                    f"{output} already exists.  Use --force to overwrite.  Exiting..."
+                )
                 sys.exit(1)
             else:
                 print(f"Deleting existing {output} ...")
@@ -304,8 +345,7 @@ def parse_arguments() -> argparse.Namespace:
 
 
 def verify_prerequisites() -> None:
-    """Verify required third-party applications are present
-    """
+    """Verify required third-party applications are present"""
     for app in ["bwa", "samtools"]:
         cmd = ["which", app]
         _run_subprocess(cmd, None)
@@ -316,7 +356,7 @@ def create_fastqs(samples: SampleFile, fastq_file: str, fastqs_dir: str) -> None
        (1st occurrence of consecutive D/F quality scores)
        and write the new per-barcode fastqs named <name>_trimmed.fastq
        to the output folder. (name = Name field from sample file)
-    
+
        - Assumes barcodes are of the same length - will raise an exception otherwise
        - Assumes barcodes start at the beginning of the read
        - Skips barcodes with no assigned name
@@ -328,7 +368,7 @@ def create_fastqs(samples: SampleFile, fastq_file: str, fastqs_dir: str) -> None
     """
 
     # setup
-    regex = re.compile(r'[DF]{2}') # low quality
+    regex = re.compile(r"[DF]{2}")  # low quality
 
     # fastq iterator setup
     SEQHEADER = 0
@@ -342,7 +382,7 @@ def create_fastqs(samples: SampleFile, fastq_file: str, fastqs_dir: str) -> None
     # parse sequence data one read at a time
     for read in fastq_parser:
         # get the barcode
-        bc = read[SEQ][:samples.bc_length]
+        bc = read[SEQ][: samples.bc_length]
         name = samples.bc_name.get(bc)
         if name:
             # find starting point for trimming low-quality bases
@@ -350,8 +390,16 @@ def create_fastqs(samples: SampleFile, fastq_file: str, fastqs_dir: str) -> None
             end_pos = match.start() if match else None
 
             # trim
-            seq_str = read[SEQ][samples.bc_length:end_pos] if end_pos else read[SEQ][samples.bc_length:]
-            qual_str = read[QUAL][samples.bc_length:end_pos] if end_pos else read[QUAL][samples.bc_length:]
+            seq_str = (
+                read[SEQ][samples.bc_length : end_pos]
+                if end_pos
+                else read[SEQ][samples.bc_length :]
+            )
+            qual_str = (
+                read[QUAL][samples.bc_length : end_pos]
+                if end_pos
+                else read[QUAL][samples.bc_length :]
+            )
 
             # write read - append to existing
             # seems like a lot of I/O - might be a better way to do this
@@ -383,9 +431,11 @@ def align_reads(reference: str, fastqs_dir: str, bams_dir: str, reindex=False) -
         print("generate index...")
         cmd = ["bwa", "index", reference]
         _run_subprocess(cmd, None)
-    
+
     # call bwa mem on every trimmed fastq - write to a SAM file
-    for fastq_filename in [f for f in os.listdir(fastqs_dir) if f.endswith(TRIMMED_FASTQ)]:
+    for fastq_filename in [
+        f for f in os.listdir(fastqs_dir) if f.endswith(TRIMMED_FASTQ)
+    ]:
         name = fastq_filename.split("_")[0]
         cmd = ["bwa", "mem", reference, os.path.join(fastqs_dir, fastq_filename)]
         samfile = os.path.join(bams_dir, f"{name}.sam")
@@ -416,11 +466,11 @@ def sam_to_bam(bams_dir: str, savesam=False) -> None:
 
         # SAM to BAM
         cmd = ["samtools", "view", "-bS", samfile]
-        with open(bamfile, 'w') as f:
+        with open(bamfile, "w") as f:
             _run_subprocess(cmd, f)
         if not savesam:
             pathlib.Path(samfile).unlink()
-        
+
         # sort BAM
         cmd = ["samtools", "sort", "-m", "100M", "-o", sorted_bamfile, bamfile]
         _run_subprocess(cmd, None)
@@ -462,12 +512,12 @@ def call_variants(bams_dir: str, reference: str) -> dict:
             if base != wildtype and frequency > 0:
                 mutation = base
                 break
-        assert(mutation is not None) # you must have one mutation
+        assert mutation is not None  # you must have one mutation
         return mutation
 
     # get the reference (for wildtype data)
     with open(reference) as f:
-        f.readline() # skip header
+        f.readline()  # skip header
         reference_sequence = f.readline().strip()
 
     sample_variants = {}
@@ -485,13 +535,15 @@ def call_variants(bams_dir: str, reference: str) -> dict:
                 wildtype = reference_sequence[position]
                 mutation = _get_mutation_base(wildtype, frequencies)
                 # increment position by one since pysam pileups and python lists are 0-based
-                variants_complete.append(VariantFrequency(
-                    position=position + 1,
-                    nreads=nreads,
-                    wildtype=wildtype,
-                    mutation=mutation,
-                    frequencies=frequencies
-                ))
+                variants_complete.append(
+                    VariantFrequency(
+                        position=position + 1,
+                        nreads=nreads,
+                        wildtype=wildtype,
+                        mutation=mutation,
+                        frequencies=frequencies,
+                    )
+                )
             sample_variants[name] = variants_complete
 
     return sample_variants
@@ -522,10 +574,14 @@ def generate_report(variants: dict, samples: SampleFile, report_file: str) -> No
 
             unique_variants = []
             for color_variant in color_variants:
-                variant_tuple = (color_variant.position, color_variant.wildtype, color_variant.mutation)
+                variant_tuple = (
+                    color_variant.position,
+                    color_variant.wildtype,
+                    color_variant.mutation,
+                )
                 if variant_tuple not in unique_variants:
                     unique_variants.append(variant_tuple)
-            
+
             for (position, wildtype, mutation) in unique_variants:
                 msg = f"The {color} mold was caused by a mutation in position {position}.  The wildtype base was {wildtype} and the mutation was {mutation}\n"
                 f.write(msg)
@@ -548,6 +604,7 @@ def generate_report(variants: dict, samples: SampleFile, report_file: str) -> No
 # helper code
 #
 
+
 def _rm_tree(pth):
     """delete a directory and all contents
     https://stackoverflow.com/questions/50186904/pathlib-recursively-remove-directory
@@ -558,12 +615,13 @@ def _rm_tree(pth):
         pth (str): path to a directory
     """
     pth = pathlib.Path(pth)
-    for child in pth.glob('*'):
+    for child in pth.glob("*"):
         if child.is_file():
             child.unlink()
         else:
             _rm_tree(child)
     pth.rmdir()
+
 
 def _run_subprocess(cmd, stdout=None):
     """run a subprocess; exits on failure
@@ -575,7 +633,7 @@ def _run_subprocess(cmd, stdout=None):
         cmd (list): command as a list of strings
         stdout (file, optional): file-type object. Defaults to None.
     """
-    cmdstring = ' '.join(cmd)
+    cmdstring = " ".join(cmd)
     print(f"running {cmdstring}...")
     try:
         subprocess.run(cmd, check=True, stdout=stdout)
@@ -583,13 +641,14 @@ def _run_subprocess(cmd, stdout=None):
         print(f"{cmdstring} failed: {str(err)}")
         sys.exit(err.returncode)
 
+
 #
 # main
 #
 
+
 def main():
-    """main
-    """
+    """main"""
     print("-- Verify prerequisites --")
     args = verify_prerequisites()
     print("-- Parse and validate input --")
