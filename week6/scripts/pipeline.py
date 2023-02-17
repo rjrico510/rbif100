@@ -484,8 +484,9 @@ def call_variants(bams_dir: str, reference: str) -> dict:
             for (position, nreads, frequencies) in bam_variants:
                 wildtype = reference_sequence[position]
                 mutation = _get_mutation_base(wildtype, frequencies)
+                # increment position by one since pysam pileups and python lists are 0-based
                 variants_complete.append(VariantFrequency(
-                    position=position,
+                    position=position + 1,
                     nreads=nreads,
                     wildtype=wildtype,
                     mutation=mutation,
