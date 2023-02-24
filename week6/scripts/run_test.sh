@@ -1,5 +1,5 @@
 #!/bin/bash -xe
-time python3 pipeline.py ../data/test/test.fastq ../data/test/test.txt ../data/test/dgorgon_reference.fa --fastqs-dir ../analysis/test/fastqs --bams-dir ../analysis/test/bams --report ../analysis/test/report.txt --reindex --force --savesam
+time python3 pipeline.py ../data/test/test.fastq ../data/test/test.txt ../data/test/dgorgon_reference.fa --fastqs-dir ../analysis/test/fastqs --bams-dir ../analysis/test/bams --report ../analysis/test/report.txt --reindex --force --savesam --debug
 WORKINGDIR="$(pwd)"
 ANALYSIS=test
 cd ../analysis/${ANALYSIS}/fastqs

@@ -4,3 +4,4 @@
 ./clean.sh test
 ./clean.sh tiny0vartest
 ./clean.sh tiny2vartest
+rm -f pipeline.log

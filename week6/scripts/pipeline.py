@@ -47,6 +47,7 @@ import argparse
 import collections
 import csv
 import gzip
+import logging
 import os
 import pysam
 import pathlib
@@ -57,6 +58,7 @@ import typing
 
 TRIMMED_FASTQ = "_trimmed.fastq"
 SORTED_BAM = "_sorted.bam"
+LOGGER = logging.getLogger(__name__) # logger for entire module
 
 #
 # class & exception definitions
@@ -239,7 +241,7 @@ def pileup(indexed_bam_file: str) -> list:
 
     # Since our reference only has a single sequence, we're going to pile up ALL of the reads. Usually you would do it in a specific region (such as chromosome 1, position 1023 to 1050 for example)
     for pileupcolumn in samfile.pileup():
-        print("coverage at base %s = %s" % (pileupcolumn.pos, pileupcolumn.n))
+        LOGGER.debug("coverage at base %s = %s" % (pileupcolumn.pos, pileupcolumn.n))
         # use a dictionary to count up the bases at each position (auto-intialized to 0)
         ntdict = collections.defaultdict(int)
         for pileupread in pileupcolumn.pileups:
@@ -251,7 +253,7 @@ def pileup(indexed_bam_file: str) -> list:
                 # This dictionary will hold all of the base read counts per nucletoide per position.
                 # Use the dictionary to calculate the frequency of each site, and report it if if the frequency is NOT  100% / 0%.
                 ntdict[base] += 1
-        print(ntdict)
+        LOGGER.debug(ntdict)
         if len(ntdict) > 1:  # found more than 1 base at the position
             # need position, count, and base frequency
             frequencies = [
@@ -279,6 +281,7 @@ def parse_arguments() -> argparse.Namespace:
     REPORT_DEFAULT = "report.txt"
     FASTQS_DEFAULT = "fastqs"
     BAMS_DEFAULT = "bams"
+    LOG_DEFAULT = "pipeline.log"
 
     parser = argparse.ArgumentParser(
         description="Demultiplex and trim reads by barcode"
@@ -303,18 +306,35 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--savesam", action="store_true", help="save intermediate SAM (debugging)"
     )
+    parser.add_argument(
+        "--debug", action="store_true", help="debug mode (for reporting)"
+    )
+    parser.add_argument(
+        "--logfile", help="log file name", default=LOG_DEFAULT
+    )
     args = parser.parse_args()
 
+    #
+    # setup log file
+    #
+    print(f"Logging to {args.logfile} with debug: {args.debug}")
+    _setup_logger(args.debug, args.logfile)
+
+    LOGGER.info("-- START ANALYSIS --")
+    LOGGER.info("-- Parse and validate input --")
+
     # echo inputs
-    print(f"sequencing fastq: {args.fastq}")
-    print(f"sample file: {args.samples}")
-    print(f"reference fasta: {args.reference}")
-    print(f"fastqs dir: {args.fastqs_dir}")
-    print(f"bams dir: {args.bams_dir}")
-    print(f"report file: {args.report}")
-    print(f"re-index reference: {args.reindex}")
-    print(f"force: {args.force}")
-    print(f"save intermdiate SAM: {args.savesam}")
+    LOGGER.info(f"sequencing fastq: {args.fastq}")
+    LOGGER.info(f"sample file: {args.samples}")
+    LOGGER.info(f"reference fasta: {args.reference}")
+    LOGGER.info(f"fastqs dir: {args.fastqs_dir}")
+    LOGGER.info(f"bams dir: {args.bams_dir}")
+    LOGGER.info(f"report file: {args.report}")
+    LOGGER.info(f"re-index reference: {args.reindex}")
+    LOGGER.info(f"force: {args.force}")
+    LOGGER.info(f"save intermdiate SAM: {args.savesam}")
+    LOGGER.info(f"debug: {args.debug}")
+    LOGGER.info(f"log file: {args.logfile}")
 
     #
     # input/output validation
@@ -323,19 +343,19 @@ def parse_arguments() -> argparse.Namespace:
     # check input existence
     for input_file in [args.fastq, args.samples, args.reference]:
         if not os.path.exists(input_file):
-            print(f"{input_file} not found.  Exiting...")
+            LOGGER.info(f"{input_file} not found.  Exiting...")
             sys.exit(1)
 
     # don't overwrite existing intermediates/outputs unless forced
     for output in [args.fastqs_dir, args.bams_dir, args.report]:
         if os.path.exists(output):
             if not args.force:
-                print(
+                LOGGER.info(
                     f"{output} already exists.  Use --force to overwrite.  Exiting..."
                 )
                 sys.exit(1)
             else:
-                print(f"Deleting existing {output} ...")
+                LOGGER.info(f"Deleting existing {output} ...")
                 if os.path.isdir(output):
                     _rm_tree(output)
                 else:
@@ -408,7 +428,7 @@ def create_fastqs(samples: SampleFile, fastq_file: str, fastqs_dir: str) -> None
                 for read_line in (read[SEQHEADER], seq_str, read[QUALHEADER], qual_str):
                     f.write(f"{read_line}\n")
         else:
-            print(f"barcode {bc} has no assigned sample ... skipping")
+            LOGGER.debug(f"barcode {bc} has no assigned sample ... skipping")
 
 
 def align_reads(reference: str, fastqs_dir: str, bams_dir: str, reindex=False) -> None:
@@ -428,7 +448,7 @@ def align_reads(reference: str, fastqs_dir: str, bams_dir: str, reindex=False) -
 
     # index reference (if needed)
     if not os.path.exists(reference + ".amb") or reindex:
-        print("generate index...")
+        LOGGER.debug("generate index...")
         cmd = ["bwa", "index", reference]
         _run_subprocess(cmd, None)
 
@@ -522,7 +542,7 @@ def call_variants(bams_dir: str, reference: str) -> dict:
 
     sample_variants = {}
     for bam_filename in [f for f in os.listdir(bams_dir) if f.endswith(SORTED_BAM)]:
-        print(f"Processing {bam_filename}...")
+        LOGGER.debug(f"Processing {bam_filename}...")
         bamfile = os.path.join(bams_dir, bam_filename)
         name = bam_filename.split("_")[0]
         # run the pileup method to get position/# reads/frequencies
@@ -614,7 +634,32 @@ def generate_report(variants: dict, samples: SampleFile, report_file: str) -> No
 #
 
 
-def _rm_tree(pth):
+def _setup_logger(debug: bool, logfile: str) -> None:
+    """set up logger
+
+    Set up a handler for both a log file and stdout/stderr
+
+    Args:
+        debug (bool): if level should be set to debug
+        logfile (str): log file name.
+    """
+    LOGGER.setLevel(logging.DEBUG) # base level
+
+    level = logging.DEBUG if debug else logging.INFO
+
+    # stream handler
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setLevel(level)
+    LOGGER.addHandler(handler)
+
+    # file handler
+    handler = logging.FileHandler(logfile)
+    handler.setLevel(level)
+    handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s: %(message)s"))
+    LOGGER.addHandler(handler)
+
+
+def _rm_tree(pth: str) -> None:
     """delete a directory and all contents
     https://stackoverflow.com/questions/50186904/pathlib-recursively-remove-directory
 
@@ -632,7 +677,7 @@ def _rm_tree(pth):
     pth.rmdir()
 
 
-def _run_subprocess(cmd, stdout=None):
+def _run_subprocess(cmd:list, stdout: typing.IO=None) -> None:
     """run a subprocess; exits on failure
 
     Require a list of strings to avoid using shell=True
@@ -643,11 +688,11 @@ def _run_subprocess(cmd, stdout=None):
         stdout (file, optional): file-type object. Defaults to None.
     """
     cmdstring = " ".join(cmd)
-    print(f"running {cmdstring}...")
+    LOGGER.debug(f"running {cmdstring}...")
     try:
         subprocess.run(cmd, check=True, stdout=stdout)
     except subprocess.CalledProcessError as err:
-        print(f"{cmdstring} failed: {str(err)}")
+        LOGGER.error(f"{cmdstring} failed: {str(err)}")
         sys.exit(err.returncode)
 
 
@@ -658,22 +703,22 @@ def _run_subprocess(cmd, stdout=None):
 
 def main():
     """main"""
-    print("-- Verify prerequisites --")
-    args = verify_prerequisites()
-    print("-- Parse and validate input --")
     args = parse_arguments()
-    print("-- Parse sample file --")
+    LOGGER.info("-- Verify prerequisites --")
+    verify_prerequisites()
+    LOGGER.info("-- Parse sample file --")
     samples = SampleFile(args.samples)
-    print("-- Create demultiplexed trimmed fastqs --")
+    LOGGER.info("-- Create demultiplexed trimmed fastqs --")
     create_fastqs(samples, args.fastq, args.fastqs_dir)
-    print("-- Align reads --")
+    LOGGER.info("-- Align reads --")
     align_reads(args.reference, args.fastqs_dir, args.bams_dir, reindex=args.reindex)
-    print("-- Create sorted indexed bam files --")
+    LOGGER.info("-- Create sorted indexed bam files --")
     sam_to_bam(args.bams_dir, savesam=args.savesam)
-    print("-- Call variants --")
+    LOGGER.info("-- Call variants --")
     variants = call_variants(args.bams_dir, args.reference)
-    print("-- Generate report --")
+    LOGGER.info("-- Generate report --")
     generate_report(variants, samples, args.report)
+    LOGGER.info("-- END ANALYSIS --")
 
 
 if __name__ == "__main__":

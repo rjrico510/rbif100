@@ -37,6 +37,8 @@ Create a script `pipeline.py` which performs the following:
   - whether or not to overwrite existing data
   - whether or not to re-run bwa index
   - whether or not to save the SAM files
+  - whether or not to report additional debugging information
+  - log file name
 - For additional details: `python3 pipeline.py -h`
 
 - The code will exit if
@@ -75,6 +77,7 @@ The following commands will run the assignment:
 - fastqs - output: directory of the demultiplexed and trimmed fastqs
 - bams - output: directory of the sorted bam files and their indices
 - report.txt - output: the text report
+- pipeline.log - output: log file
 - run.sh - script used to run the data
 
 ## Development Notes
