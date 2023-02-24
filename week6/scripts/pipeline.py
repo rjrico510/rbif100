@@ -556,7 +556,6 @@ def generate_report(variants: dict, samples: SampleFile, report_file: str) -> No
     - Iterates through all samples, and reports each variant.
 
     Code does not assume only 1 variant per color or sample
-    (although the reporting text would be admittedly odd in that case)
 
     Args:
         variants (dict): dictionary of {name:list[VariantCalls]}
@@ -582,6 +581,10 @@ def generate_report(variants: dict, samples: SampleFile, report_file: str) -> No
                 if variant_tuple not in unique_variants:
                     unique_variants.append(variant_tuple)
 
+            # in the event a color has # SNPs != 1
+            if len(unique_variants) != 1:
+                f.write(f"{len(unique_variants)} variants identified for {color}\n")
+
             for (position, wildtype, mutation) in unique_variants:
                 msg = f"The {color} mold was caused by a mutation in position {position}.  The wildtype base was {wildtype} and the mutation was {mutation}\n"
                 f.write(msg)
@@ -591,7 +594,13 @@ def generate_report(variants: dict, samples: SampleFile, report_file: str) -> No
         # report all the per-sample results
         for name in samples.name_color.keys():
             color = samples.name_color[name]
-            for variant in variants.get(name, []):
+            name_variants = variants.get(name, [])
+
+            # in the event a name has # SNPs != 1
+            if len(name_variants) != 1:
+                f.write(f"{len(name_variants)} variants identified for {name}\n")
+
+            for variant in name_variants:
                 for base, frequency in variant.frequencies:
                     if base == variant.mutation:
                         mutation_frequency = frequency

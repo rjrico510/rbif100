@@ -79,8 +79,8 @@ The following commands will run the assignment:
 
 ## Development Notes
 
-- The reporting code does not assume a single variant per color - but the report output itself does.
-  - or at least gives no indication of more than one variant is found for a given color
+- The reporting code does not assume a single SNP per color.
+  - there is a simple check that reports if there are 0 variants or > 2 variants per color or sample.
 - The wildtype is taken from the reference; a better way might be to take it from the MD tag.
   - Reading the entire reference is OK in this case but not scalable.
 - The code was tested on two small datasets:
