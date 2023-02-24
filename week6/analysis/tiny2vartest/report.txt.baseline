@@ -1,0 +1,13 @@
+2 variants identified for Black
+The Black mold was caused by a mutation in position 1.  The wildtype base was A and the mutation was T
+The Black mold was caused by a mutation in position 217.  The wildtype base was G and the mutation was C
+2 variants identified for White
+The White mold was caused by a mutation in position 1.  The wildtype base was A and the mutation was T
+The White mold was caused by a mutation in position 217.  The wildtype base was G and the mutation was C
+
+2 variants identified for BarBlack
+Sample BarBlack had a Black mold, 2 reads, and had 50% of the reads at position 1 had the mutation T
+Sample BarBlack had a Black mold, 2 reads, and had 50% of the reads at position 217 had the mutation C
+2 variants identified for FooWhite
+Sample FooWhite had a White mold, 2 reads, and had 50% of the reads at position 1 had the mutation T
+Sample FooWhite had a White mold, 2 reads, and had 50% of the reads at position 217 had the mutation C
