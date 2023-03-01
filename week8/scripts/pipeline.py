@@ -13,11 +13,12 @@ import requests
 import sys
 import typing
 
-LOGGER = logging.getLogger(__name__) # logger for entire module
+LOGGER = logging.getLogger(__name__)  # logger for entire module
 
 
 class OutputFiles(typing.NamedTuple):
     """output files"""
+
     fasta_file: str
     homolog_file: str
 
@@ -33,15 +34,30 @@ def parse_arguments() -> argparse.Namespace:
     DEFAULT_SPECIES = "human"
     LOG_DEFAULT = "pipeline.log"
 
-    parser = argparse.ArgumentParser(description="Given a human gene name, get the sequence, AA of longest open reading frame, and homologs")
-    parser.add_argument("gene_name", help="gene name")
-    parser.add_argument("-s", "--species", default=DEFAULT_SPECIES, help="species (defau;t human)")
-    parser.add_argument("-o", "--output-dir", dest="output_dir", default=DEFAULT_OUTPUT_DIR, help="output folder (default current location)")
-    parser.add_argument("-f", "--force", action="store_true",  help="force overwrite of existing output")
-    parser.add_argument("-v", "--verbose", action="store_true", help="verbose - more logging and outputs")
-    parser.add_argument(
-        "-l", "--logfile", help="log file name", default=LOG_DEFAULT
+    parser = argparse.ArgumentParser(
+        description="Given a human gene name, get the sequence, AA of longest open reading frame, and homologs"
     )
+    parser.add_argument("gene_name", help="gene name")
+    parser.add_argument(
+        "-s", "--species", default=DEFAULT_SPECIES, help="species (defau;t human)"
+    )
+    parser.add_argument(
+        "-o",
+        "--output-dir",
+        dest="output_dir",
+        default=DEFAULT_OUTPUT_DIR,
+        help="output folder (default current location)",
+    )
+    parser.add_argument(
+        "-f", "--force", action="store_true", help="force overwrite of existing output"
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="verbose - more logging and outputs",
+    )
+    parser.add_argument("-l", "--logfile", help="log file name", default=LOG_DEFAULT)
     args = parser.parse_args()
 
     #
@@ -64,7 +80,7 @@ def parse_arguments() -> argparse.Namespace:
     return args
 
 
-def setup_outputs(gene_name: str, output_dir:str, force: bool=False) -> OutputFiles:
+def setup_outputs(gene_name: str, output_dir: str, force: bool = False) -> OutputFiles:
     """setup output paths and verify
 
     Args:
@@ -95,7 +111,10 @@ def setup_outputs(gene_name: str, output_dir:str, force: bool=False) -> OutputFi
 
     return output_files
 
-def get_ensembl_gene_id(name: str, species: str, output_dir:str, verbose: bool=False) -> str:
+
+def get_ensembl_gene_id(
+    name: str, species: str, output_dir: str, verbose: bool = False
+) -> str:
     """Get ensembl ID from mygene.info.
        Exits if not found.
 
@@ -110,18 +129,14 @@ def get_ensembl_gene_id(name: str, species: str, output_dir:str, verbose: bool=F
     """
 
     url = "https://mygene.info/v3/query"
-    params = {
-        "q": name,
-        "species": [species],
-        "fields": "symbol,name,ensembl,taxid"
-    }
+    params = {"q": name, "species": [species], "fields": "symbol,name,ensembl,taxid"}
     data = _request(url, params, verbose)
 
     if verbose:
         with open(os.path.join(output_dir, "mygene.json"), "w") as f:
             json.dump(data, f, indent=4)
 
-    if data.get("hits") and len(data["hits"]) > 0: # must be a hit - get the 1st
+    if data.get("hits") and len(data["hits"]) > 0:  # must be a hit - get the 1st
         try:
             ensembl_gene_id = data["hits"][0]["ensembl"]["gene"]
         except KeyError:
@@ -130,11 +145,13 @@ def get_ensembl_gene_id(name: str, species: str, output_dir:str, verbose: bool=F
     else:
         print(f"No hits for {name} - exiting...")
         sys.exit(1)
-        
+
     return ensembl_gene_id
 
 
-def get_fasta(ensembl_gene_id: str, fasta_file: str, output_dir:str, verbose: bool=False) -> None:
+def get_fasta(
+    ensembl_gene_id: str, fasta_file: str, output_dir: str, verbose: bool = False
+) -> None:
     """Get gene sequence
        Get longest open reading frame in the sequence and convert to an AA sequence
        Write both to a fasta file
@@ -157,7 +174,7 @@ def get_fasta(ensembl_gene_id: str, fasta_file: str, output_dir:str, verbose: bo
 
     # translate the longest open reading frame to an AA sequence
     # TODO - find out if we care about introns here or not
-    orf = Bio.Seq.Seq(_get_longest_orf_aa(data['seq']))
+    orf = Bio.Seq.Seq(_get_longest_orf_aa(data["seq"]))
     aa = orf.translate()
     LOGGER.debug(aa)
 
@@ -169,7 +186,9 @@ def get_fasta(ensembl_gene_id: str, fasta_file: str, output_dir:str, verbose: bo
         f.write(f"{str(aa)}\n")
 
 
-def get_homologs(ensembl_gene_id: str, homolog_file: str,  output_dir:str, verbose: bool=False) -> None:
+def get_homologs(
+    ensembl_gene_id: str, homolog_file: str, output_dir: str, verbose: bool = False
+) -> None:
     """Get list of species which are homologous to a specified gene
 
     Args:
@@ -179,7 +198,11 @@ def get_homologs(ensembl_gene_id: str, homolog_file: str,  output_dir:str, verbo
         verbose (bool, optional): More verbose output.   Defaults to False.
     """
     url = f"https://rest.ensembl.org/homology/id/{ensembl_gene_id}"
-    params = {"content-type": "application/json", "layout": "condensed", "sequence": "none"}
+    params = {
+        "content-type": "application/json",
+        "layout": "condensed",
+        "sequence": "none",
+    }
     data = _request(url, params, verbose)
 
     if verbose:
@@ -193,7 +216,7 @@ def get_homologs(ensembl_gene_id: str, homolog_file: str,  output_dir:str, verbo
             species.add(homology["target"]["species"])
     else:
         LOGGER.warning("No homology data for {ensembl_gene_id}")
-    species.remove("homo_sapiens") #TODO - include or not include?   Human-specific?
+    species.remove("homo_sapiens")  # TODO - include or not include?   Human-specific?
 
     species = list(species)
     species.sort()
@@ -202,9 +225,11 @@ def get_homologs(ensembl_gene_id: str, homolog_file: str,  output_dir:str, verbo
         for s in species:
             f.write(f"{s}\n")
 
+
 #
 # helper code
 #
+
 
 def _setup_logger(debug: bool, logfile: str) -> None:
     """set up logger
@@ -215,7 +240,7 @@ def _setup_logger(debug: bool, logfile: str) -> None:
         debug (bool): if level should be set to debug
         logfile (str): log file name.
     """
-    LOGGER.setLevel(logging.DEBUG) # base level
+    LOGGER.setLevel(logging.DEBUG)  # base level
 
     level = logging.DEBUG if debug else logging.INFO
 
@@ -231,7 +256,7 @@ def _setup_logger(debug: bool, logfile: str) -> None:
     LOGGER.addHandler(handler)
 
 
-def _request(url: str, params:dict=None, verbose:bool=False) -> dict:
+def _request(url: str, params: dict = None, verbose: bool = False) -> dict:
     """Executes a request.    Exit if the request fails.
 
     Args:
@@ -251,7 +276,7 @@ def _request(url: str, params:dict=None, verbose:bool=False) -> dict:
     return data
 
 
-def _get_longest_orf_aa(dna:str) -> str:
+def _get_longest_orf_aa(dna: str) -> str:
     """Get longest open reading frame in a DNA strand
 
     Args:
@@ -260,27 +285,29 @@ def _get_longest_orf_aa(dna:str) -> str:
     Returns:
         str: AA of longest open reading frame.  None if not found.
     """
-    regex = re.compile(r'ATG(?:[ACTG]{3})*?(?:TAA|TAG|TGA)')
+    regex = re.compile(r"ATG(?:[ACTG]{3})*?(?:TAA|TAG|TGA)")
     hits = regex.findall(dna)
     if hits:
-        longest = max(hits, key = len)
+        longest = max(hits, key=len)
         LOGGER.debug(len(longest))
         LOGGER.debug(longest)
     else:
         longest = None
 
     return longest
-    
+
 
 def main():
     """main"""
-    #TODO - figure out if including species is a bad idea (just support human)
+    # TODO - figure out if including species is a bad idea (just support human)
     args = parse_arguments()
     LOGGER.info("-- Setup output --")
     output = setup_outputs(args.gene_name, args.output_dir, args.force)
 
     LOGGER.info("-- get ensembl ID from mygene.info --")
-    ensembl_gene_id = get_ensembl_gene_id(args.gene_name, args.species, args.output_dir, args.verbose)
+    ensembl_gene_id = get_ensembl_gene_id(
+        args.gene_name, args.species, args.output_dir, args.verbose
+    )
     LOGGER.info(f"Ensembl ID: {ensembl_gene_id}")
 
     LOGGER.info("-- get nucleotide sequence via Ensembl --")
@@ -291,6 +318,7 @@ def main():
     LOGGER.info("-- get homologous genes via Ensembl --")
     get_homologs(ensembl_gene_id, output.homolog_file, args.output_dir, args.verbose)
     LOGGER.info("-- END ANALYSIS --")
+
 
 if __name__ == "__main__":
     main()
