@@ -79,7 +79,8 @@ def setup_outputs(gene_name: str, output_dir:str, force: bool=False) -> OutputFi
     return output_files
 
 def get_ensembl_gene_id(name: str, species: str, verbose: bool=False) -> str:
-    """Get ensembl ID from mygene.info
+    """Get ensembl ID from mygene.info.
+       Exits if not found.
 
     Args:
         name (str): gene name
@@ -87,7 +88,7 @@ def get_ensembl_gene_id(name: str, species: str, verbose: bool=False) -> str:
         verbose (bool, optional): More verbose output.   Defaults to False.
 
     Returns:
-        str: Ensembl ID (None if not found)
+        str: Ensembl ID
     """
 
     url = "https://mygene.info/v3/query"
@@ -102,11 +103,15 @@ def get_ensembl_gene_id(name: str, species: str, verbose: bool=False) -> str:
     with open("mygene.json", "w") as f:
         json.dump(data, f, indent=4)
 
-    try: #TODO clean this up - check if list has entries rather than just 0
-        ensembl_gene_id = data["hits"][0]["ensembl"]["gene"]
-    except KeyError:
-        print(f"MyGeneInfo - no ensembl gene ID found")
-        ensembl_gene_id = None
+    if data.get("hits") and len(data["hits"]) > 0: # must be a hit - get the 1st
+        try:
+            ensembl_gene_id = data["hits"][0]["ensembl"]["gene"]
+        except KeyError:
+            print(f"MyGeneInfo - no ensembl gene ID found - exiting...")
+            sys.exit(1)
+    else:
+        print(f"No hits for {name} - exiting...")
+        sys.exit(1)
         
     return ensembl_gene_id
 
@@ -164,9 +169,12 @@ def get_homologs(ensembl_gene_id: str, homolog_file: str, verbose: bool=False) -
 
     # identify all the unique species specified - sort & write out
     species = set()
-    for homology in data["data"][0]["homologies"]: # TODO - check if entry is present
-        species.add(homology["target"]["species"])
-    species.remove("homo_sapiens") #TODO - include or not include?
+    if data.get("data") and len(data["data"]) > 0:
+        for homology in data["data"][0].get("homologies", {}):
+            species.add(homology["target"]["species"])
+    else:
+        print("No homology data for {ensembl_gene_id}")
+    species.remove("homo_sapiens") #TODO - include or not include?   Human-specific?
 
     species = list(species)
     species.sort()
@@ -180,7 +188,7 @@ def get_homologs(ensembl_gene_id: str, homolog_file: str, verbose: bool=False) -
 #
 
 def _request(url: str, params:dict=None, verbose:bool=False) -> dict:
-    """Executes a request
+    """Executes a request.    Exit if the request fails.
 
     Args:
         url (str): URL for the request
@@ -188,14 +196,14 @@ def _request(url: str, params:dict=None, verbose:bool=False) -> dict:
         verbose (bool, optional): More verbose output.   Defaults to False.
 
     Returns:
-        dict: json output of the response
+        dict: json output of the response.
     """
     response = requests.get(url, params=params)
-    if response.status_code != 200: #TODO - better handle this
+    if response.status_code not in (200, 301):
         print(f"API call failure: {url} - response code {response.status_code}")
-        data = None
-    else:
-        data = response.json()
+        sys.exit(1)
+
+    data = response.json()
     return data
 
 
@@ -224,6 +232,7 @@ def main():
     """main
     """
     # setup inputs/outputs
+    #TODO - figure out if including species is a bad idea (just support human)
     args = parse_arguments()
     output = setup_outputs(args.gene_name, args.output_dir, args.force)
 
