@@ -111,7 +111,7 @@ def get_ensembl_gene_id(name: str, species: str, verbose: bool=False) -> str:
     return ensembl_gene_id
 
 
-def get_sequence(ensembl_gene_id: str, fasta_file: str, verbose: bool=False) -> None:
+def get_fasta(ensembl_gene_id: str, fasta_file: str, verbose: bool=False) -> None:
     """Get gene sequence
        Get longest open reading frame in the sequence and convert to an AA sequence
        Write both to a fasta file
@@ -200,7 +200,7 @@ def _request(url: str, params:dict=None, verbose:bool=False) -> dict:
 
 
 def _get_longest_orf_aa(dna:str) -> str:
-    """Get longest open reading frame in a cDNA strand
+    """Get longest open reading frame in a DNA strand
 
     Args:
         dna (str): DNA transcript
@@ -211,7 +211,6 @@ def _get_longest_orf_aa(dna:str) -> str:
     regex = re.compile(r'ATG(?:[ACTG]{3})*?(?:TAA|TAG|TGA)')
     hits = regex.findall(dna)
     if hits:
-        print(len(hits))
         longest = max(hits, key = len)
         print(len(longest))
         print(longest)
@@ -224,18 +223,20 @@ def _get_longest_orf_aa(dna:str) -> str:
 def main():
     """main
     """
+    # setup inputs/outputs
     args = parse_arguments()
     output = setup_outputs(args.gene_name, args.output_dir, args.force)
-    # TODO - set a debug flag
 
     # get ensembl ID from mygene.info
     ensembl_gene_id = get_ensembl_gene_id(args.gene_name, args.species, args.verbose)
     print(ensembl_gene_id)
-    # get nucleotide sequence from ensembl
+
+    # get nucleotide sequence via Ensembl
     # translate longest open reading frame to AA
     # write to fasta
-    get_sequence(ensembl_gene_id, output.fasta_file, args.verbose)
-    # get homologous genes
+    get_fasta(ensembl_gene_id, output.fasta_file, args.verbose)
+
+    # get homologous genes via Ensembl
     get_homologs(ensembl_gene_id, output.homolog_file, args.verbose)
 
 
