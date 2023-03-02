@@ -47,5 +47,11 @@ class TestORF(unittest.TestCase):
         actual = pipeline._get_longest_orf_aa(input)
         self.assertTrue(expected, actual)
 
+    def test_orf_multiple_matches(self):
+        input = "ATGCCCTAACATGAAACCCTTTTGACCATGGGGTAA"
+        expected = "ATGAAACCCTTTTGA"
+        actual = pipeline._get_longest_orf_aa(input)
+        self.assertTrue(expected, actual)
+
 if __name__ == "__main__":
     unittest.main()
