@@ -5,12 +5,15 @@
 
 import argparse
 import Bio.Seq
+import logging
 import json
 import os
 import re
 import requests
 import sys
 import typing
+
+LOGGER = logging.getLogger(__name__) # logger for entire module
 
 
 class OutputFiles(typing.NamedTuple):
@@ -28,6 +31,7 @@ def parse_arguments() -> argparse.Namespace:
 
     DEFAULT_OUTPUT_DIR = "."
     DEFAULT_SPECIES = "human"
+    LOG_DEFAULT = "pipeline.log"
 
     parser = argparse.ArgumentParser(description="Given a human gene name, get the sequence, AA of longest open reading frame, and homologs")
     parser.add_argument("gene_name", help="gene name")
@@ -35,14 +39,27 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("-o", "--output-dir", dest="output_dir", default=DEFAULT_OUTPUT_DIR, help="output folder (default current location)")
     parser.add_argument("-f", "--force", action="store_true",  help="force overwrite of existing output")
     parser.add_argument("-v", "--verbose", action="store_true", help="verbose - more logging and outputs")
+    parser.add_argument(
+        "-l", "--logfile", help="log file name", default=LOG_DEFAULT
+    )
     args = parser.parse_args()
 
+    #
+    # setup log file
+    #
+    print(f"Logging to {args.logfile} with verbosity: {args.verbose}")
+    _setup_logger(args.verbose, args.logfile)
+
+    LOGGER.info("-- START ANALYSIS --")
+    LOGGER.info("-- Parse and validate input --")
+
     # echo inputs
-    print(f"Gene name: {args.gene_name}")
-    print(f"Species: {args.species}")
-    print(f"Output directory: {args.output_dir}")
-    print(f"Force overwrite: {args.force}")
-    print(f"Verbose: {args.verbose}")
+    LOGGER.info(f"Gene name: {args.gene_name}")
+    LOGGER.info(f"Species: {args.species}")
+    LOGGER.info(f"Output directory: {args.output_dir}")
+    LOGGER.info(f"Force overwrite: {args.force}")
+    LOGGER.info(f"Verbose: {args.verbose}")
+    LOGGER.info(f"Log file: {args.logfile}")
 
     return args
 
@@ -71,9 +88,9 @@ def setup_outputs(gene_name: str, output_dir:str, force: bool=False) -> OutputFi
         for output_file in output_files:
             if os.path.exists(output_file):
                 if force:
-                    print(f"{output_file} exists - will overwrite")
+                    LOGGER.info(f"{output_file} exists - will overwrite")
                 else:
-                    print(f"{output_file} already exists - exiting...")
+                    LOGGER.error(f"{output_file} already exists - exiting...")
                     sys.exit(1)
 
     return output_files
@@ -108,7 +125,7 @@ def get_ensembl_gene_id(name: str, species: str, output_dir:str, verbose: bool=F
         try:
             ensembl_gene_id = data["hits"][0]["ensembl"]["gene"]
         except KeyError:
-            print(f"MyGeneInfo - no ensembl gene ID found - exiting...")
+            LOGGER.error(f"MyGeneInfo - no ensembl gene ID found - exiting...")
             sys.exit(1)
     else:
         print(f"No hits for {name} - exiting...")
@@ -142,7 +159,7 @@ def get_fasta(ensembl_gene_id: str, fasta_file: str, output_dir:str, verbose: bo
     # TODO - find out if we care about introns here or not
     orf = Bio.Seq.Seq(_get_longest_orf_aa(data['seq']))
     aa = orf.translate()
-    print(aa)
+    LOGGER.debug(aa)
 
     # write the fasta
     with open(fasta_file, "w") as f:
@@ -175,7 +192,7 @@ def get_homologs(ensembl_gene_id: str, homolog_file: str,  output_dir:str, verbo
         for homology in data["data"][0].get("homologies", {}):
             species.add(homology["target"]["species"])
     else:
-        print("No homology data for {ensembl_gene_id}")
+        LOGGER.warning("No homology data for {ensembl_gene_id}")
     species.remove("homo_sapiens") #TODO - include or not include?   Human-specific?
 
     species = list(species)
@@ -186,8 +203,33 @@ def get_homologs(ensembl_gene_id: str, homolog_file: str,  output_dir:str, verbo
             f.write(f"{s}\n")
 
 #
-# helpers
+# helper code
 #
+
+def _setup_logger(debug: bool, logfile: str) -> None:
+    """set up logger
+
+    Set up a handler for both a log file and stdout/stderr
+
+    Args:
+        debug (bool): if level should be set to debug
+        logfile (str): log file name.
+    """
+    LOGGER.setLevel(logging.DEBUG) # base level
+
+    level = logging.DEBUG if debug else logging.INFO
+
+    # stream handler
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setLevel(level)
+    LOGGER.addHandler(handler)
+
+    # file handler
+    handler = logging.FileHandler(logfile)
+    handler.setLevel(level)
+    handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s: %(message)s"))
+    LOGGER.addHandler(handler)
+
 
 def _request(url: str, params:dict=None, verbose:bool=False) -> dict:
     """Executes a request.    Exit if the request fails.
@@ -202,7 +244,7 @@ def _request(url: str, params:dict=None, verbose:bool=False) -> dict:
     """
     response = requests.get(url, params=params)
     if response.status_code not in (200, 301):
-        print(f"API call failure: {url} - response code {response.status_code}")
+        LOGGER.error(f"API call failure: {url} - response code {response.status_code}")
         sys.exit(1)
 
     data = response.json()
@@ -222,8 +264,8 @@ def _get_longest_orf_aa(dna:str) -> str:
     hits = regex.findall(dna)
     if hits:
         longest = max(hits, key = len)
-        print(len(longest))
-        print(longest)
+        LOGGER.debug(len(longest))
+        LOGGER.debug(longest)
     else:
         longest = None
 
@@ -231,25 +273,24 @@ def _get_longest_orf_aa(dna:str) -> str:
     
 
 def main():
-    """main
-    """
-    # setup inputs/outputs
+    """main"""
     #TODO - figure out if including species is a bad idea (just support human)
     args = parse_arguments()
+    LOGGER.info("-- Setup output --")
     output = setup_outputs(args.gene_name, args.output_dir, args.force)
 
-    # get ensembl ID from mygene.info
+    LOGGER.info("-- get ensembl ID from mygene.info --")
     ensembl_gene_id = get_ensembl_gene_id(args.gene_name, args.species, args.output_dir, args.verbose)
-    print(ensembl_gene_id)
+    LOGGER.info(f"Ensembl ID: {ensembl_gene_id}")
 
-    # get nucleotide sequence via Ensembl
-    # translate longest open reading frame to AA
-    # write to fasta
+    LOGGER.info("-- get nucleotide sequence via Ensembl --")
+    LOGGER.info("-- translate longest open reading frame to AA --")
+    LOGGER.info("-- write to fasta --")
     get_fasta(ensembl_gene_id, output.fasta_file, args.output_dir, args.verbose)
 
-    # get homologous genes via Ensembl
+    LOGGER.info("-- get homologous genes via Ensembl --")
     get_homologs(ensembl_gene_id, output.homolog_file, args.output_dir, args.verbose)
-
+    LOGGER.info("-- END ANALYSIS --")
 
 if __name__ == "__main__":
     main()
