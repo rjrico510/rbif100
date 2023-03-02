@@ -145,7 +145,7 @@ def get_fasta(ensembl_gene_id: str, fasta_file: str, output_dir:str, verbose: bo
     print(aa)
 
     # write the fasta
-    with open(fasta_file, "a") as f:
+    with open(fasta_file, "w") as f:
         f.write(f">{data['desc']}\n")
         f.write(f"{data['seq']}\n")
         f.write(f">{'AA'}\n")
