@@ -153,7 +153,7 @@ def main():
     # get ensembl ID from mygene.info
     ensembl_gene_id = get_ensembl_gene_id(gene_name, species)
     print(ensembl_gene_id)
-    # get transcript sequence from ensembl
+    # get nucleotide sequence from ensembl
     # translate longest open reading frame to AA
     # write to fasta
     get_sequence(ensembl_gene_id, fasta_file)
