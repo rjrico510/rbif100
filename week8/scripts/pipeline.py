@@ -3,18 +3,88 @@
 
 """
 
+import argparse
 import Bio.Seq
 import json
 import os
 import re
 import requests
+import sys
+import typing
 
-def get_ensembl_gene_id(name: str, species: str) -> str:
+
+class OutputFiles(typing.NamedTuple):
+    """output files"""
+    fasta_file: str
+    homolog_file: str
+
+
+def parse_arguments() -> argparse.Namespace:
+    """parse arguments
+
+    Returns:
+        argparse.Namespace: argument object
+    """
+
+    DEFAULT_OUTPUT_DIR = "."
+    DEFAULT_SPECIES = "human"
+
+    parser = argparse.ArgumentParser(description="Given a human gene name, get the sequence, AA of longest open reading frame, and homologs")
+    parser.add_argument("gene_name", help="gene name")
+    parser.add_argument("-s", "--species", default=DEFAULT_SPECIES, help="species (defau;t human)")
+    parser.add_argument("-o", "--output-dir", dest="output_dir", default=DEFAULT_OUTPUT_DIR, help="output folder (default current location)")
+    parser.add_argument("-f", "--force", action="store_true",  help="force overwrite of existing output")
+    parser.add_argument("-v", "--verbose", action="store_true", help="verbose - more logging and outputs")
+    args = parser.parse_args()
+
+    # echo inputs
+    print(f"Gene name: {args.gene_name}")
+    print(f"Species: {args.species}")
+    print(f"Output directory: {args.output_dir}")
+    print(f"Force overwrite: {args.force}")
+    print(f"Verbose: {args.verbose}")
+
+    return args
+
+
+def setup_outputs(gene_name: str, output_dir:str, force: bool=False) -> OutputFiles:
+    """setup output paths and verify
+
+    Args:
+        gene_name (str): gene name
+        output_dir (str): output directory
+        force (bool, optional): override if files already exists.   Defaults to False.
+
+    Returns:
+        OutputFiles: tuple of fasta and homolog files
+    """
+    FASTA_FILENAME_ROOT = "_transcript.fasta"
+    HOMOLOG_FILENAME_ROOT = "_homology_list.txt"
+    fasta_file = os.path.join(output_dir, f"{gene_name}{FASTA_FILENAME_ROOT}")
+    homolog_file = os.path.join(output_dir, f"{gene_name}{HOMOLOG_FILENAME_ROOT}")
+
+    output_files = OutputFiles(fasta_file=fasta_file, homolog_file=homolog_file)
+
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    else:
+        for output_file in output_files:
+            if os.path.exists(output_file):
+                if force:
+                    print(f"{output_file} exists - will overwrite")
+                else:
+                    print(f"{output_file} already exists - exiting...")
+                    sys.exit(1)
+
+    return output_files
+
+def get_ensembl_gene_id(name: str, species: str, verbose: bool=False) -> str:
     """Get ensembl ID from mygene.info
 
     Args:
         name (str): gene name
         species (str): species
+        verbose (bool, optional): More verbose output.   Defaults to False.
 
     Returns:
         str: Ensembl ID (None if not found)
@@ -24,9 +94,9 @@ def get_ensembl_gene_id(name: str, species: str) -> str:
     params = {
         "q": name,
         "species": [species],
-        "fields": "all"
+        "fields": "symbol,name,ensembl,taxid"
     }
-    data = _request(url, params)
+    data = _request(url, params, verbose)
 
     # debug
     with open("mygene.json", "w") as f:
@@ -41,7 +111,7 @@ def get_ensembl_gene_id(name: str, species: str) -> str:
     return ensembl_gene_id
 
 
-def get_sequence(ensembl_gene_id: str, fasta_file: str) -> None:
+def get_sequence(ensembl_gene_id: str, fasta_file: str, verbose: bool=False) -> None:
     """Get gene sequence
        Get longest open reading frame in the sequence and convert to an AA sequence
        Write both to a fasta file
@@ -49,12 +119,13 @@ def get_sequence(ensembl_gene_id: str, fasta_file: str) -> None:
     Args:
         ensembl_gene_id (str): Ensembl gene ID
         fasta_file (str): fasta file to write to
+        verbose (bool, optional): More verbose output.   Defaults to False.
     """
 
     # get the sequence data
     url = f"https://rest.ensembl.org/sequence/id/{ensembl_gene_id}"
     params = {"content-type": "application/json", "type": "genomic"}
-    data = _request(url, params)
+    data = _request(url, params, verbose)
     # TODO - check what really is needed here - I'm getting the entire genomic sequence
 
     # debug
@@ -75,16 +146,17 @@ def get_sequence(ensembl_gene_id: str, fasta_file: str) -> None:
         f.write(f"{str(aa)}\n")
 
 
-def get_homologs(ensembl_gene_id: str, homolog_file: str) -> None:
+def get_homologs(ensembl_gene_id: str, homolog_file: str, verbose: bool=False) -> None:
     """Get list of species which are homologous to a specified gene
 
     Args:
         ensembl_gene_id (str): Ensembl Gene ID
         homolog_file (str): output file
+        verbose (bool, optional): More verbose output.   Defaults to False.
     """
     url = f"https://rest.ensembl.org/homology/id/{ensembl_gene_id}"
-    params = {"content-type": "application/json", "layout": "condensed"}
-    data = _request(url, params)
+    params = {"content-type": "application/json", "layout": "condensed", "sequence": "none"}
+    data = _request(url, params, verbose)
 
     # debug
     with open("ensembl_homolog.json", "w") as f:
@@ -107,12 +179,13 @@ def get_homologs(ensembl_gene_id: str, homolog_file: str) -> None:
 # helpers
 #
 
-def _request(url: str, params:dict=None) -> dict:
+def _request(url: str, params:dict=None, verbose:bool=False) -> dict:
     """Executes a request
 
     Args:
         url (str): URL for the request
         params (dict, optional): Dictionary of query parameters. Defaults to None.
+        verbose (bool, optional): More verbose output.   Defaults to False.
 
     Returns:
         dict: json output of the response
@@ -149,25 +222,21 @@ def _get_longest_orf_aa(dna:str) -> str:
     
 
 def main():
-    # TODO - parameterize
-    # TODO - check for file existence
+    """main
+    """
+    args = parse_arguments()
+    output = setup_outputs(args.gene_name, args.output_dir, args.force)
     # TODO - set a debug flag
-    gene_name = "MC1R"
-    species = "human"
-    fasta_file = "transcript.fasta"
-    homolog_file_path = "."
-    homolog_file_root = "_homology_list.txt"
-    homolog_file = os.path.join(homolog_file_path, f"{gene_name}{homolog_file_root}")
 
     # get ensembl ID from mygene.info
-    ensembl_gene_id = get_ensembl_gene_id(gene_name, species)
+    ensembl_gene_id = get_ensembl_gene_id(args.gene_name, args.species, args.verbose)
     print(ensembl_gene_id)
     # get nucleotide sequence from ensembl
     # translate longest open reading frame to AA
     # write to fasta
-    get_sequence(ensembl_gene_id, fasta_file)
+    get_sequence(ensembl_gene_id, output.fasta_file, args.verbose)
     # get homologous genes
-    get_homologs(ensembl_gene_id, homolog_file)
+    get_homologs(ensembl_gene_id, output.homolog_file, args.verbose)
 
 
 if __name__ == "__main__":
