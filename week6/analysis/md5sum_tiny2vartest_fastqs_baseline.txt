@@ -1,0 +1,2 @@
+e205173348ee69929f85a07af7a7ca15  BarBlack_trimmed.fastq
+0d1f5515c1a7257bebe1f6ef97308f99  FooWhite_trimmed.fastq

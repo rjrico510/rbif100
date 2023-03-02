@@ -1,0 +1,2 @@
+3ca0f0d36ae74db95360516813ada023  Abbey_trimmed.fastq
+d1e70cda62985e8e1d3c5ec1aa2fe6fe  Adelaide_trimmed.fastq
