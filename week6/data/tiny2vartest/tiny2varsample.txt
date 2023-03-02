@@ -1,0 +1,3 @@
+Name	Color	Barcode
+BarBlack	Black	TT
+FooWhite	White	GG
