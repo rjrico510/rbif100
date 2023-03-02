@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+"""TODO - top-level docstring
+
+"""
 
 import Bio.Seq
 import json
@@ -72,8 +75,13 @@ def get_sequence(ensembl_gene_id: str, fasta_file: str) -> None:
         f.write(f"{str(aa)}\n")
 
 
-def get_homologs(ensembl_gene_id, homolog_file):
-    #url = f"https://www.ncbi.nlm.nih.gov/homologene/?term=Homo+sapiens+MC1R"
+def get_homologs(ensembl_gene_id: str, homolog_file: str) -> None:
+    """Get list of species which are homologous to a specified gene
+
+    Args:
+        ensembl_gene_id (str): Ensembl Gene ID
+        homolog_file (str): output file
+    """
     url = f"https://rest.ensembl.org/homology/id/{ensembl_gene_id}"
     params = {"content-type": "application/json", "layout": "condensed"}
     data = _request(url, params)
@@ -82,8 +90,9 @@ def get_homologs(ensembl_gene_id, homolog_file):
     with open("ensembl_homolog.json", "w") as f:
         json.dump(data, f, indent=4)
 
+    # identify all the unique species specified - sort & write out
     species = set()
-    for homology in data["data"][0]["homologies"]:
+    for homology in data["data"][0]["homologies"]: # TODO - check if entry is present
         species.add(homology["target"]["species"])
     species.remove("homo_sapiens") #TODO - include or not include?
 
@@ -124,7 +133,7 @@ def _get_longest_orf_aa(dna:str) -> str:
         dna (str): DNA transcript
 
     Returns:
-        str: AA of longest open reading frame
+        str: AA of longest open reading frame.  None if not found.
     """
     regex = re.compile(r'ATG(?:[ACTG]{3})*?(?:TAA|TAG|TGA)')
     hits = regex.findall(dna)
