@@ -58,7 +58,7 @@ def setup_outputs(gene_name: str, output_dir:str, force: bool=False) -> OutputFi
     Returns:
         OutputFiles: tuple of fasta and homolog files
     """
-    FASTA_FILENAME_ROOT = "_transcript.fasta"
+    FASTA_FILENAME_ROOT = "_gene_AA.fasta"
     HOMOLOG_FILENAME_ROOT = "_homology_list.txt"
     fasta_file = os.path.join(output_dir, f"{gene_name}{FASTA_FILENAME_ROOT}")
     homolog_file = os.path.join(output_dir, f"{gene_name}{HOMOLOG_FILENAME_ROOT}")
@@ -78,13 +78,14 @@ def setup_outputs(gene_name: str, output_dir:str, force: bool=False) -> OutputFi
 
     return output_files
 
-def get_ensembl_gene_id(name: str, species: str, verbose: bool=False) -> str:
+def get_ensembl_gene_id(name: str, species: str, output_dir:str, verbose: bool=False) -> str:
     """Get ensembl ID from mygene.info.
        Exits if not found.
 
     Args:
         name (str): gene name
         species (str): species
+        output_dir (str): output directory (only used with verbose)
         verbose (bool, optional): More verbose output.   Defaults to False.
 
     Returns:
@@ -99,9 +100,9 @@ def get_ensembl_gene_id(name: str, species: str, verbose: bool=False) -> str:
     }
     data = _request(url, params, verbose)
 
-    # debug
-    with open("mygene.json", "w") as f:
-        json.dump(data, f, indent=4)
+    if verbose:
+        with open(os.path.join(output_dir, "mygene.json"), "w") as f:
+            json.dump(data, f, indent=4)
 
     if data.get("hits") and len(data["hits"]) > 0: # must be a hit - get the 1st
         try:
@@ -116,7 +117,7 @@ def get_ensembl_gene_id(name: str, species: str, verbose: bool=False) -> str:
     return ensembl_gene_id
 
 
-def get_fasta(ensembl_gene_id: str, fasta_file: str, verbose: bool=False) -> None:
+def get_fasta(ensembl_gene_id: str, fasta_file: str, output_dir:str, verbose: bool=False) -> None:
     """Get gene sequence
        Get longest open reading frame in the sequence and convert to an AA sequence
        Write both to a fasta file
@@ -124,6 +125,7 @@ def get_fasta(ensembl_gene_id: str, fasta_file: str, verbose: bool=False) -> Non
     Args:
         ensembl_gene_id (str): Ensembl gene ID
         fasta_file (str): fasta file to write to
+        output_dir (str): output directory (only used with verbose)
         verbose (bool, optional): More verbose output.   Defaults to False.
     """
 
@@ -131,11 +133,10 @@ def get_fasta(ensembl_gene_id: str, fasta_file: str, verbose: bool=False) -> Non
     url = f"https://rest.ensembl.org/sequence/id/{ensembl_gene_id}"
     params = {"content-type": "application/json", "type": "genomic"}
     data = _request(url, params, verbose)
-    # TODO - check what really is needed here - I'm getting the entire genomic sequence
 
-    # debug
-    with open("ensembl.json", "w") as f:
-        json.dump(data, f, indent=4)
+    if verbose:
+        with open(os.path.join(output_dir, "ensembl_gene.json"), "w") as f:
+            json.dump(data, f, indent=4)
 
     # translate the longest open reading frame to an AA sequence
     # TODO - find out if we care about introns here or not
@@ -151,21 +152,22 @@ def get_fasta(ensembl_gene_id: str, fasta_file: str, verbose: bool=False) -> Non
         f.write(f"{str(aa)}\n")
 
 
-def get_homologs(ensembl_gene_id: str, homolog_file: str, verbose: bool=False) -> None:
+def get_homologs(ensembl_gene_id: str, homolog_file: str,  output_dir:str, verbose: bool=False) -> None:
     """Get list of species which are homologous to a specified gene
 
     Args:
         ensembl_gene_id (str): Ensembl Gene ID
         homolog_file (str): output file
+        output_dir (str): output directory (only used with verbose)
         verbose (bool, optional): More verbose output.   Defaults to False.
     """
     url = f"https://rest.ensembl.org/homology/id/{ensembl_gene_id}"
     params = {"content-type": "application/json", "layout": "condensed", "sequence": "none"}
     data = _request(url, params, verbose)
 
-    # debug
-    with open("ensembl_homolog.json", "w") as f:
-        json.dump(data, f, indent=4)
+    if verbose:
+        with open(os.path.join(output_dir, "ensembl_homolog.json"), "w") as f:
+            json.dump(data, f, indent=4)
 
     # identify all the unique species specified - sort & write out
     species = set()
@@ -237,16 +239,16 @@ def main():
     output = setup_outputs(args.gene_name, args.output_dir, args.force)
 
     # get ensembl ID from mygene.info
-    ensembl_gene_id = get_ensembl_gene_id(args.gene_name, args.species, args.verbose)
+    ensembl_gene_id = get_ensembl_gene_id(args.gene_name, args.species, args.output_dir, args.verbose)
     print(ensembl_gene_id)
 
     # get nucleotide sequence via Ensembl
     # translate longest open reading frame to AA
     # write to fasta
-    get_fasta(ensembl_gene_id, output.fasta_file, args.verbose)
+    get_fasta(ensembl_gene_id, output.fasta_file, args.output_dir, args.verbose)
 
     # get homologous genes via Ensembl
-    get_homologs(ensembl_gene_id, output.homolog_file, args.verbose)
+    get_homologs(ensembl_gene_id, output.homolog_file, args.output_dir, args.verbose)
 
 
 if __name__ == "__main__":
