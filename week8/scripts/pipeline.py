@@ -1,6 +1,21 @@
 #!/usr/bin/env python3
-"""TODO - top-level docstring
+"""Pipeline to take a gene name, and get sequence/homolog infomation.
 
+Given a gene name & species:
+(1) Get the Ensembl ID from mygene.info
+(2) Get the sequence data:
+(2a) Use the Ensembl ID to get the gene's DNA sequence from Ensembl
+(2b) Find the longest open reading frame and convert to an amino acid sequence
+(2c) Write the results of the above steps to a fasta file
+(3) Get species with homologous genes and write to a file.
+
+inputs:
+(1) Gene name
+(2) Species (currently only homo sapiens is supported)
+
+outputs:
+(1) A fasta of the gene sequence and the AA sequence of the longest open reading frame
+(2) A homolog file containing a sorted list of all other species with homologous genes
 """
 
 import argparse
@@ -14,6 +29,14 @@ import sys
 import typing
 
 LOGGER = logging.getLogger(__name__)  # logger for entire module
+
+SPECIES = {
+    "homo sapiens":
+    {
+        "mygene": "human",
+        "ensembl": "homo_sapiens"
+    }
+}
 
 
 class OutputFiles(typing.NamedTuple):
@@ -31,7 +54,7 @@ def parse_arguments() -> argparse.Namespace:
     """
 
     DEFAULT_OUTPUT_DIR = "."
-    DEFAULT_SPECIES = "human"
+    DEFAULT_SPECIES = "homo sapiens"
     LOG_DEFAULT = "pipeline.log"
 
     parser = argparse.ArgumentParser(
@@ -39,14 +62,14 @@ def parse_arguments() -> argparse.Namespace:
     )
     parser.add_argument("gene_name", help="gene name")
     parser.add_argument(
-        "-s", "--species", default=DEFAULT_SPECIES, help="species (defau;t human)"
+        "-s", "--species", choices=SPECIES.keys(), default=DEFAULT_SPECIES, help=f"species (default {DEFAULT_SPECIES})"
     )
     parser.add_argument(
         "-o",
         "--output-dir",
         dest="output_dir",
         default=DEFAULT_OUTPUT_DIR,
-        help="output folder (default current location)",
+        help=f"output folder (default {DEFAULT_OUTPUT_DIR})",
     )
     parser.add_argument(
         "-f", "--force", action="store_true", help="force overwrite of existing output"
@@ -57,7 +80,7 @@ def parse_arguments() -> argparse.Namespace:
         action="store_true",
         help="verbose - more logging and outputs",
     )
-    parser.add_argument("-l", "--logfile", help="log file name", default=LOG_DEFAULT)
+    parser.add_argument("-l", "--logfile", help=f"log file name (default {LOG_DEFAULT})", default=LOG_DEFAULT)
     args = parser.parse_args()
 
     #
@@ -129,7 +152,7 @@ def get_ensembl_gene_id(
     """
 
     url = "https://mygene.info/v3/query"
-    params = {"q": name, "species": [species], "fields": "symbol,name,ensembl,taxid"}
+    params = {"q": name, "species": [SPECIES[species]["mygene"]], "fields": "symbol,name,ensembl,taxid"}
     data = _request(url, params, verbose)
 
     if verbose:
@@ -173,7 +196,6 @@ def get_fasta(
             json.dump(data, f, indent=4)
 
     # translate the longest open reading frame to an AA sequence
-    # TODO - find out if we care about introns here or not
     orf = Bio.Seq.Seq(_get_longest_orf_aa(data["seq"]))
     aa = orf.translate()
     LOGGER.debug(aa)
@@ -182,17 +204,18 @@ def get_fasta(
     with open(fasta_file, "w") as f:
         f.write(f">{data['desc']}\n")
         f.write(f"{data['seq']}\n")
-        f.write(f">{'AA'}\n")
+        f.write(f">{'AA'}\n") # TODO - better header?
         f.write(f"{str(aa)}\n")
 
 
 def get_homologs(
-    ensembl_gene_id: str, homolog_file: str, output_dir: str, verbose: bool = False
+    ensembl_gene_id: str, species: str, homolog_file: str, output_dir: str, verbose: bool = False
 ) -> None:
     """Get list of species which are homologous to a specified gene
 
     Args:
         ensembl_gene_id (str): Ensembl Gene ID
+        species (str): species
         homolog_file (str): output file
         output_dir (str): output directory (only used with verbose)
         verbose (bool, optional): More verbose output.   Defaults to False.
@@ -210,19 +233,22 @@ def get_homologs(
             json.dump(data, f, indent=4)
 
     # identify all the unique species specified - sort & write out
-    species = set()
+    homologous_species = set()
     if data.get("data") and len(data["data"]) > 0:
-        for homology in data["data"][0].get("homologies", {}):
-            species.add(homology["target"]["species"])
+        for homology in data["data"][0].get("homologies", []):
+            homologous_species.add(homology["target"]["species"])
     else:
         LOGGER.warning("No homology data for {ensembl_gene_id}")
-    species.remove("homo_sapiens")  # TODO - include or not include?   Human-specific?
+    
+    species_ensembl = SPECIES[species]["ensembl"]
+    if species_ensembl in homologous_species:
+        homologous_species.remove(species_ensembl)  # omit the species you're looking at (if present)
 
-    species = list(species)
-    species.sort()
+    homologous_species = list(homologous_species)
+    homologous_species.sort()
 
     with open(homolog_file, "w") as f:
-        for s in species:
+        for s in homologous_species:
             f.write(f"{s}\n")
 
 
@@ -299,7 +325,6 @@ def _get_longest_orf_aa(dna: str) -> str:
 
 def main():
     """main"""
-    # TODO - figure out if including species is a bad idea (just support human)
     args = parse_arguments()
     LOGGER.info("-- Setup output --")
     output = setup_outputs(args.gene_name, args.output_dir, args.force)
@@ -316,7 +341,7 @@ def main():
     get_fasta(ensembl_gene_id, output.fasta_file, args.output_dir, args.verbose)
 
     LOGGER.info("-- get homologous genes via Ensembl --")
-    get_homologs(ensembl_gene_id, output.homolog_file, args.output_dir, args.verbose)
+    get_homologs(ensembl_gene_id, args.species, output.homolog_file, args.output_dir, args.verbose)
     LOGGER.info("-- END ANALYSIS --")
 
 
