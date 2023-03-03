@@ -643,6 +643,10 @@ def _setup_logger(debug: bool, logfile: str) -> None:
         debug (bool): if level should be set to debug
         logfile (str): log file name.
     """
+    log_dir = os.path.dirname(logfile)
+    if log_dir and not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+
     LOGGER.setLevel(logging.DEBUG) # base level
 
     level = logging.DEBUG if debug else logging.INFO
