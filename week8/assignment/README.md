@@ -62,6 +62,9 @@ The following commands will run the assignment:
 
 ## Development Notes
 
+- There is a skeleton for possibly handling more than one species.
+  - The SPECIES map is intended as an initial pass at handling this
+  - This only deals with human, but at least pulls anything species-specific out of the code.
 - There are unit tests for the open reading frame method:
 https://github.com/rjrico510/rbif100/tree/main/week8/scripts/test_pipeline.py
 - The code was also tested on
