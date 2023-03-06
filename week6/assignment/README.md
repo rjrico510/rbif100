@@ -86,7 +86,9 @@ The following commands will run the assignment:
   - there is a simple check that reports if there are 0 variants or > 2 variants per color or sample.
 - The wildtype is taken from the reference; a better way might be to take it from the MD tag.
   - Reading the entire reference is OK in this case but not scalable.
-- The code was tested on two small datasets:
+- The code was tested on a few small datasets:
   - https://github.com/rjrico510/rbif100/tree/main/week6/data/test (2 samples; 8 reads taken from the assignment data)
   - https://github.com/rjrico510/rbif100/tree/main/week6/data/tinytest (2 samples; 4 synthetic reads with variants at known locations)
+  - https://github.com/rjrico510/rbif100/tree/main/week6/data/tiny0vartest (2 samples; 0 variants)
+  - https://github.com/rjrico510/rbif100/tree/main/week6/data/tiny2vartest (2 samples; 2 variants per sample)
 - There is only a check for `bwa` and `samtools`; if pysam is absent the script will immediately fail with a ModuleNotFoundError
