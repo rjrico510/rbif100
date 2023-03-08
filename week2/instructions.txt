@@ -1,0 +1,36 @@
+Story:
+
+Jane has discovered 10 motifs that are associated with radiation resistance in her colony of bacteria, R.bifella. A motif is a short, recurring sequence of DNA that is associated with gene regulation. She wants to choose the motif that occurs most frequently across the bacterial genome.   However, since these experiments are costly, she wants to pick the one that has the highest number of occurrences in the bacterial genome. Which motif should she choose?
+
+Steps:
+
+	SSH into the AWS server and create a folder called week2. I will be grading out of this directory.
+
+	Copy the motif list and the genome of the R.bifella from  /home/rbif/week2_assignment/
+
+	Create a single bash script that does the following:
+
+    	Print out the number of occurrences for each motif that is found in the bacterial genome and output to a file called motif_count.txt
+
+    	Create a FASTA file for each motif (so 10 in total) that contains all of the genes and their corresponding sequences that have that motif. Each file should be named after the motif (i.e., "ATTTG.fasta") and outputted to a new directory called motifs.
+
+*Note*  Please comment your code, clarifying comments for snippets of code. 
+
+For example: #This is a sentence. Here are more examples of how comments might appear. 
+
+You also need a readme file that includes a description of what the goal of the script is and how to execute it.
+You can find an example output of the assignment in /home/rbif/week2_example_output along with how comments should look like. You will also find an example readme file of how I generally expect them to be structured. They should just have brief descriptions of the goal of each script, what the input and output files are, and most importantly tell me exactly how I should run the script. If I copy and paste that command verbatim, I should run into 0 issues executing it on the server.
+
+
+Please make sure that you use relative paths and not absolute paths to files. This means that if I copy your assignment into my own directory, I should be able to execute it without any issues.
+For example, say you are "usera" and write a script to create a file inside /home/usera/week2/somefile.txt. If I copy that same script to my directory and execute it, it will attempt to write into /home/usera/week1 and fail because I do not have write permissions to create a file in your own home directory.
+
+I expect you to use some kind of loop to iterate over the files. This means that I should not see 10 separate identical lines of code executing the same command over 10 different motifs that are explicitly typed out. This also means I should not see a single string of nucleotides typed out anywhere in the script (unless for some reason it is in a comment). Also as another hint, you should be using "grep"
+
+
+
+
+
+I will mark anything modified inside your assignment directory after that time as late.
+
+Assignment 1 due by Tuesday, midnight ET.

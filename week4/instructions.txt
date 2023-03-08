@@ -1,0 +1,69 @@
+Assignment
+Important! Your assignment must contain a readme.txt file that indicates the exact command used to execute your script on the AWS server. It should indicate what inputs are used, and indicate what outputs are produced.
+
+Use relative paths so that if I copied your week4 folder to any other directory, it will still execute properly.
+
+A very large part of programming is automation. There should NOT be a single line of code that contains input data written manually.
+For example, in copyExomes.sh, I should not see the word "dromedary" anywhere in the script.
+In the final python script, it is okay to have the header written manually to find a column/row, but not the exact data entry. This allows your script to be robust, so if I replaced the data clinical file with a new one with new entries (but same columns)  it would still work.  
+
+Please let me know immediately if any of the above is unclear.
+
+Story:
+
+Dr. Banner leads a team of researchers that have each discovered a unique eukaryotic organism. They all seem to be related to each other and the team has tried to sequence their specimens. Homologous genes between each eukaryote were labeled with the same gene name. Each of organisms have some degree of gamma ray resistance and Dr. Banner constructed a list of motifs that may be associated with resistance. She wants to use only the most abundant motif and knockout the genes that contain these motifs using CRISPR.  She first needs to identify a list of suitable CRISPR gene candidates and submit a report. 
+
+Inputs:
+
+/home/rbif/week4/clinical_data.txt **This is a tab-delimited file! Some built in commands will need an additional parameter to handle this
+
+/home/rbif/week4/motif_list.txt
+
+/home/rbif/week4/exomes/*.fasta
+
+Steps:
+
+1. Create a directory called week4 in your home directory. 
+
+2. Create a bash script called copyExomes.sh
+
+Read in the clinical data file and identify the samples that have a diameter between 20 and 30 mm long (inclusive) and have had their genomes sequenced. Copy the identified exomes using the sample code names to a new directory called exomesCohort.
+
+3. Create a bash script called createCrisprReady.sh
+
+Using the motif_list.txt file, identify the 3 highest occurring motifs in each exome inside the exomesCohort  folder. 
+Output the headers and corresponding sequences to a new file called {exomename}_topmotifs.fasta.  **This means to only select for the genes that have at least one of the three top motifs and output to a new file
+Note: The sequence does not need to contain all 3 motifs, it just needs to have at least 1 of them.
+
+ “{exomename}_topmotifs.fasta” should contain the code name of the sample. For example, fox_topmotifs.fasta.
+
+4. Create a bash script called identifyCrisprSite.sh
+
+For each gene inside the exomename_topmotifs.fasta files, identify a suitable CRISPR site.
+Find sequences that contain “NGG”, where “N” can be any base, that has at least 20 basepairs upstream.
+Example of upstream: ATGAACGTCTGTAAGAACTGCGGATCTGTCA (Everything left of CGG is upstream of the DNA) 
+Output suitable candidates (headers and sequences) to a new file called {exomename}_precrispr.fasta
+5. Create a bash script called editGenome.sh
+
+Using those files, write a script that will insert the letter A right before the NGG site. Output to a new file called {exomename}_postcrispr.fasta 
+
+6. Create a python script called exomeReport.py
+
+Write a python script that will generate a single report that summarizes the findings. It should be a text file that lists the name of the discoverer of the organism, the diameter, the code name and the environment it came from.
+
+As the final line, print out all the genes that were present in the cohort (the subset of samples with diameter between 20 and 30 mm long (inclusive) and have had their genomes sequenced). These genes should be union of all the genes in the cohort (this also implies that the list you print should contain no duplicates).
+
+Note: You are only comparing that organism against the other organisms of the same cohort (20-30mm in diameter). ie You are summarizing the motif-containing exomes with just the CRISPR-ready genes, in otherwords using the {exomename}_precrispr.fasta (or {exomename}_postcrispr.fasta since the headers should be identical between those two files)
+
+
+
+Example:
+
+Organism FOX, discovered by DISCOVERER, has a diameter of DIAMETER, and from the environment ENVIRONMENT.
+
+..
+
+...
+
+The number of the union of genes across the cohort is ____. Those genes are:
+GENE1,GENE30,GENE50,etc.
