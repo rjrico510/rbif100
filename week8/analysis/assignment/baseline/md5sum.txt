@@ -1,0 +1,2 @@
+3db5e20f5dbef3a10de5bdf4077b1d0c  MC1R_gene_AA.fasta
+e3b837f558239acb5ad4de1782210c63  MC1R_homology_list.txt

@@ -1,0 +1,41 @@
+Create a single python script that performs the following steps.
+
+Assignment
+
+You’re a computational scientist that loves the color red. So much so that you would like to discover all animals that have red hair.
+
+A quick google search tells you a gene responsible for this color (try it yourself). MC1R
+
+Sometimes it's not enough to know just the gene name, you need specific ids for certain databases.
+
+Step 1. Use the mygene database restful api endpoint to get the ensembl id. Start from the name of the gene (MC1R), and end with the ensembl id. It may take multiple queries to get there. This does not need to be written to a file, you need to use it in your code to do the ensembl database lookup.
+
+*Make sure to only look for human species
+
+Now that you have the ensembl id, use the Ensemble database and RESTful api to get more information about this red hair gene.
+
+Step 2. Use the ensembl database endpoints to grab the nucleotide sequence data for MC1R. Write this sequence to a fasta file. (Remember a fasta file always has a header > , followed by a sequence). 
+
+Find the longest open reading frame (ORF) and then convert it from DNA to Amino Acid. Feel free to use any function you find online to to get the longest ORF (as long as it doesn't require you to install other pip packages). 
+
+Then use biopython (from Bio.Seq import Seq) to convert the nucleotide sequence into an amino acid sequence. Write this amino acid sequence to the same fasta file.
+
+Step 3. What other species have genes that are homologous to MC1R? Write the full unique list of species to a text file call mc1r_homology_list.txt.
+
+----------------------------------
+
+Your final week8 directory should have a single python script. And two outputs, a fasta file and a homology txt file.
+
+You can use this link to find appropriate endpoints:
+
+http://rest.ensembl.org/?content-type=text/html
+
+Other notes:
+
+Please use the ensembl id for the DNA sequence (not the protein sequences).
+
+Since it is the full DNA sequence it will contain introns, exons, and maybe splice sites.
+
+Find the longest open reading frame (ORF) and then convert it from DNA to Amino Acid. Feel free to use any function you find online to to get the longest ORF (as long as it doesn't require you to install other pip packages)
+
+Assignment 4 due by Tuesday, midnight ET.
