@@ -30,6 +30,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import os
 import pandas as pd
+import seaborn as sns
 import sys
 
 LOGGER = logging.getLogger(__name__)  # logger for entire module
@@ -276,6 +277,10 @@ def generate_distance_scatter_plots(code_names:list, distance_dir: str, output_d
         plt.title(f"{code_name} distance matrix - matplotlib")
         plt.savefig(os.path.join(output_dir, f"{code_name}_matplotlib_distance.png"))
 
+        # seaborn version - TODO - pick one
+        splot = sns.lmplot(data=distance_data, x="x", y="y", fit_reg=False)
+        splot.savefig(os.path.join(output_dir, f"{code_name}_seaborn_distance.png")) 
+        
 
 #
 # helper code
