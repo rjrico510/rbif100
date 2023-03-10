@@ -25,9 +25,7 @@ outputs:
 """
 
 import argparse
-import glob
 import logging
-import numpy as np
 import os
 import pandas as pd
 import sys
@@ -42,8 +40,8 @@ def parse_arguments() -> argparse.Namespace:
         argparse.Namespace: argument object
     """
 
-    DEFAULT_MAX_AVE = 2
-    DEFAULT_MIN_AVE = 1
+    DEFAULT_NUM_HIGH = 2
+    DEFAULT_NUM_LOW = 1
     DEFAULT_NEW_CLINICAL_DATA = "clinical_data_with_diversity.txt"
     DEFAULT_OUTPUT_DIR = "."
     LOG_DEFAULT = "pipeline.log"
@@ -55,10 +53,10 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("diversity_dir", help="directory of diversity scores")
     parser.add_argument("distances_dir", help="directory of distances data")
     parser.add_argument(
-        "-m", "--min", default=DEFAULT_MIN_AVE, type=int, help=f"number of lowest average samples to plot (default {DEFAULT_MIN_AVE})"
+        "-m", "--num-low", dest="num_high", default=DEFAULT_NUM_LOW, type=int, help=f"number of lowest average samples to plot (default {DEFAULT_NUM_LOW})"
     )
     parser.add_argument(
-        "-n", "--max", default=DEFAULT_MAX_AVE, type=int, help=f"number of highest average samples to plot (default {DEFAULT_MAX_AVE})"
+        "-n", "--num-high", dest="num_low", default=DEFAULT_NUM_HIGH, type=int, help=f"number of highest average samples to plot (default {DEFAULT_NUM_HIGH})"
     )
     parser.add_argument(
         "-o",
@@ -101,6 +99,8 @@ def parse_arguments() -> argparse.Namespace:
     LOGGER.info(f"Distances directory (input): {args.distances_dir}")
     LOGGER.info(f"Output directory: {args.output_dir}")
     LOGGER.info(f"New clinical data file: {args.clinical_data_output}")
+    LOGGER.info(f"Number high average to plot: {args.num_high}")
+    LOGGER.info(f"Number low average to plot: {args.num_low}")
     LOGGER.info(f"Force overwrite: {args.force}")
     LOGGER.info(f"Verbose: {args.verbose}")
     LOGGER.info(f"Log file: {args.logfile}")
@@ -177,17 +177,19 @@ def generate_diversity_stats(clinical_data_file: str, diversity_dir: str, clinic
     if verbose and output_dir is None:
         raise ValueError("If verbose is set, you must specify output_dir")
 
-    DIVERSITY_FILENAME_ROOT = ".diversity.txt"
+    DIVERSITY_FILENAME_SUFFIX = ".diversity.txt"
+    CLINICAL_INDEX = "code_name"
 
+    # read the clinical data file - index by 
     clinical_data = pd.read_csv(clinical_data_file, sep="\t")
-    clinical_data.set_index("code_name", drop=False, inplace=True)
-    clinical_data.sort_index(ascending=True, inplace=True) # Q: do I even need this?
+    clinical_data.set_index(CLINICAL_INDEX, drop=False, inplace=True)
+    clinical_data.sort_index(ascending=True, inplace=True) # Q: do I need this?
     LOGGER.debug("-- clinical data input --")
     LOGGER.debug(clinical_data)
 
     # read all the diversity files into a dataframe
-    diversity_filenames = [f for f in os.listdir(diversity_dir) if f.endswith(DIVERSITY_FILENAME_ROOT)]
-    #diversity_filenames.sort()
+    diversity_filenames = [f for f in os.listdir(diversity_dir) if f.endswith(DIVERSITY_FILENAME_SUFFIX)]
+    #diversity_filenames.sort() # Q: do I need this?
     diversity_data = pd.DataFrame()
     for diversity_filename in diversity_filenames:
         code_name = diversity_filename.split(".")[0]
@@ -195,6 +197,7 @@ def generate_diversity_stats(clinical_data_file: str, diversity_dir: str, clinic
     LOGGER.debug("-- diversity data input --")
     LOGGER.debug(diversity_data)
 
+    # generate stats, add to the dataframe & write the result
     diversity_mean = diversity_data.mean()
     diversity_std = diversity_data.std()
 
@@ -216,6 +219,46 @@ def generate_diversity_stats(clinical_data_file: str, diversity_dir: str, clinic
     clinical_data.to_csv(clinical_data_output, sep="\t", index=False, float_format='%.3f')
 
     return clinical_data
+
+
+def generate_distance_scatter_plots(clinical_data:pd.DataFrame, distance_dir: str, output_dir: str, num_high: int=2 , num_low: int=1, verbose: bool=False) -> None:
+    """Generate scatter plots from N highest and M lowest average diversity scores
+
+    Args:
+        clinical_data (pd.DataFrame): full set of clinical data with average diversity score
+        distance_dir (str): directory of distance data
+        output_dir (str): output directory
+        num_high (int, optional): number of highest average scores to plot.   Defaults to 2.
+        num_low (int, optional): number of lowest average scores to plot.   Defaults to 1
+        verbose (bool, optional): Write additional logging information. Defaults to False.
+    """
+    DISTANCE_FILE_SUFFIX = ".distance.txt"
+
+    clinical_data.sort_values("averages", inplace=True, ascending=False)
+    clinical_data_to_plot = pd.concat([clinical_data.head(num_high), clinical_data.tail(num_low)])
+    clinical_data_to_plot.drop_duplicates(inplace=True) # cleanup in case the ranges overlap
+
+    LOGGER.debug("-- clinical data to plot --")
+    LOGGER.debug(clinical_data_to_plot)
+
+    for code_name in clinical_data_to_plot.index:
+        LOGGER.debug(f"scatter plot {code_name}")
+        distance_file = os.path.join(distance_dir, f"{code_name}{DISTANCE_FILE_SUFFIX}")
+        if not os.path.exists(distance_file):
+            LOGGER.warning(f"missing distance file: {distance_file} .. skipping plot")
+            continue
+
+        distance_data = pd.read_csv(distance_file, header=None)
+        LOGGER.debug("-- distance data --")
+        LOGGER.debug(distance_data)
+        plot = distance_data.plot.scatter(x=0, y=1, title=f"{code_name} distance data")
+        fig = plot.get_figure()
+        fig.savefig(os.path.join(output_dir, f"{code_name}_distance.png"))
+
+
+
+
+
 
 
 #
@@ -267,6 +310,8 @@ def main():
     clinical_output_file = setup_inputs_outputs(args.clinical_data_file, args.diversity_dir, args.distances_dir, args.output_dir, args.clinical_data_output, args.force)
     LOGGER.info("-- Generate Diversity Statistics --")
     clinical_data = generate_diversity_stats(args.clinical_data_file, args.diversity_dir, clinical_output_file, args.output_dir, args.verbose)
+    LOGGER.info("-- Generate scatterplots --")
+    generate_distance_scatter_plots(clinical_data, args.distances_dir, args.output_dir, args.num_low, args.num_high, args.verbose)
 
 if __name__ == "__main__":
     main()
