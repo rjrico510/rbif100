@@ -22,7 +22,7 @@ import argparse
 import Bio.Seq
 import logging
 import json
-import os
+import pathlib
 import re
 import requests
 import sys
@@ -42,8 +42,8 @@ SPECIES = {
 class OutputFiles(typing.NamedTuple):
     """output files"""
 
-    fasta_file: str
-    homolog_file: str
+    fasta_file: pathlib.Path
+    homolog_file: pathlib.Path
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -116,21 +116,20 @@ def setup_outputs(gene_name: str, output_dir: str, force: bool = False) -> Outpu
     """
     FASTA_FILENAME_ROOT = "_gene_AA.fasta"
     HOMOLOG_FILENAME_ROOT = "_homology_list.txt"
-    fasta_file = os.path.join(output_dir, f"{gene_name}{FASTA_FILENAME_ROOT}")
-    homolog_file = os.path.join(output_dir, f"{gene_name}{HOMOLOG_FILENAME_ROOT}")
+    fasta_file = pathlib.Path(output_dir, f"{gene_name}{FASTA_FILENAME_ROOT}")
+    homolog_file = pathlib.Path(output_dir, f"{gene_name}{HOMOLOG_FILENAME_ROOT}")
 
     output_files = OutputFiles(fasta_file=fasta_file, homolog_file=homolog_file)
 
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-    else:
-        for output_file in output_files:
-            if os.path.exists(output_file):
-                if force:
-                    LOGGER.info(f"{output_file} exists - will overwrite")
-                else:
-                    LOGGER.error(f"{output_file} already exists - exiting...")
-                    sys.exit(1)
+    pathlib.Path(output_dir).mkdir(exist_ok=True, parents=True)
+
+    for output_file in output_files:
+        if pathlib.Path.exists(output_file):
+            if force:
+                LOGGER.info(f"{output_file} exists - will overwrite")
+            else:
+                LOGGER.error(f"{output_file} already exists - exiting...")
+                sys.exit(1)
 
     return output_files
 
@@ -156,7 +155,7 @@ def get_ensembl_gene_id(
     data = _request(url, params, verbose)
 
     if verbose:
-        with open(os.path.join(output_dir, "mygene.json"), "w") as f:
+        with pathlib.Path(output_dir, "mygene.json").open(mode="w") as f:
             json.dump(data, f, indent=4)
 
     if data.get("hits") and len(data["hits"]) > 0:  # must be a hit - get the 1st
@@ -173,7 +172,7 @@ def get_ensembl_gene_id(
 
 
 def get_fasta(
-    ensembl_gene_id: str, fasta_file: str, output_dir: str, verbose: bool = False
+    ensembl_gene_id: str, fasta_file: pathlib.Path, output_dir: str, verbose: bool = False
 ) -> None:
     """Get gene sequence
        Get longest open reading frame in the sequence and convert to an AA sequence
@@ -181,7 +180,7 @@ def get_fasta(
 
     Args:
         ensembl_gene_id (str): Ensembl gene ID
-        fasta_file (str): fasta file to write to
+        fasta_file (pathlib.Path): fasta file to write to
         output_dir (str): output directory (only used with verbose)
         verbose (bool, optional): More verbose output.   Defaults to False.
     """
@@ -192,7 +191,7 @@ def get_fasta(
     data = _request(url, params, verbose)
 
     if verbose:
-        with open(os.path.join(output_dir, "ensembl_gene.json"), "w") as f:
+        with pathlib.Path(output_dir, "ensembl_gene.json").open(mode="w") as f:
             json.dump(data, f, indent=4)
 
     # translate the longest open reading frame to an AA sequence
@@ -201,7 +200,7 @@ def get_fasta(
     LOGGER.debug(aa)
 
     # write the fasta
-    with open(fasta_file, "w") as f:
+    with fasta_file.open(mode="w") as f:
         f.write(f">{data['desc']}\n")
         f.write(f"{data['seq']}\n")
         f.write(f">{'AA'}\n") # TODO - better header?
@@ -209,14 +208,14 @@ def get_fasta(
 
 
 def get_homologs(
-    ensembl_gene_id: str, species: str, homolog_file: str, output_dir: str, verbose: bool = False
+    ensembl_gene_id: str, species: str, homolog_file: pathlib.Path, output_dir: str, verbose: bool = False
 ) -> None:
     """Get list of species which are homologous to a specified gene
 
     Args:
         ensembl_gene_id (str): Ensembl Gene ID
         species (str): species
-        homolog_file (str): output file
+        homolog_file (pathlib.Path): output file
         output_dir (str): output directory (only used with verbose)
         verbose (bool, optional): More verbose output.   Defaults to False.
     """
@@ -229,7 +228,7 @@ def get_homologs(
     data = _request(url, params, verbose)
 
     if verbose:
-        with open(os.path.join(output_dir, "ensembl_homolog.json"), "w") as f:
+        with pathlib.Path(output_dir, "ensembl_homolog.json").open(mode="w") as f:
             json.dump(data, f, indent=4)
 
     # identify all the unique species specified - sort & write out
@@ -247,7 +246,7 @@ def get_homologs(
     homologous_species = list(homologous_species)
     homologous_species.sort()
 
-    with open(homolog_file, "w") as f:
+    with homolog_file.open(mode="w") as f:
         for s in homologous_species:
             f.write(f"{s}\n")
 
@@ -266,9 +265,8 @@ def _setup_logger(debug: bool, logfile: str) -> None:
         debug (bool): if level should be set to debug
         logfile (str): log file name.
     """
-    log_dir = os.path.dirname(logfile)
-    if log_dir and not os.path.exists(log_dir):
-        os.makedirs(log_dir)
+    log_dir = pathlib.Path(logfile).parent
+    pathlib.Path(log_dir).mkdir(exist_ok=True, parents=True)
 
     LOGGER.setLevel(logging.DEBUG)  # base level
 
