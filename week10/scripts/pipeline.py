@@ -28,7 +28,7 @@ import argparse
 import logging
 import matplotlib
 import matplotlib.pyplot as plt
-import os
+import pathlib
 import pandas as pd
 import seaborn as sns
 import sys
@@ -111,7 +111,7 @@ def parse_arguments() -> argparse.Namespace:
     return args
 
 
-def setup_inputs_outputs(input_clinical_file: str, diversity_dir: str, distances_dir: str, output_dir: str, output_clinical_file: str, force: bool=False) -> str:
+def setup_inputs_outputs(input_clinical_file: str, diversity_dir: str, distances_dir: str, output_dir: str, output_clinical_file: str, force: bool=False) -> pathlib.Path:
     """configure and validate input/output
 
     Args:
@@ -123,13 +123,13 @@ def setup_inputs_outputs(input_clinical_file: str, diversity_dir: str, distances
         force (bool, optional): Overwrite existing data. Defaults to False.
 
     Returns:
-        str: full path to clinical data output file based on inputs
+        pathlib.Path: full path to clinical data output file based on inputs
     """
 
     # is the input present?
     missing_input = False
     for input in (input_clinical_file, diversity_dir, distances_dir):
-        if not os.path.exists(input):
+        if not pathlib.Path(input).exists():
             LOGGER.error(f"Missing input: {input}")
     if missing_input:
         sys.exit(1)
@@ -137,25 +137,27 @@ def setup_inputs_outputs(input_clinical_file: str, diversity_dir: str, distances
     # are the directories really directories?
     not_dir = False
     for input in (diversity_dir, distances_dir):
-        if not os.path.isdir(input):
+        if not pathlib.Path(input).is_dir():
             LOGGER.error(f"Not a directory: {input}")
     if not_dir:
         sys.exit(1)
 
-    output_clinical_filepath = os.path.join(output_dir, output_clinical_file)
+    output_clinical_filepath = pathlib.Path(output_dir, output_clinical_file)
 
     # create the output dir; exit if previous results are present unless overridden
-    if os.path.exists(output_dir):
-        if not force and os.path.exists(output_clinical_filepath):
+    if pathlib.Path(output_dir).exists():
+        if not force and output_clinical_filepath.exists():
             LOGGER.error(f"output is already present - use --force to overwrite")
             sys.exit(1)
     else:
-        os.makedirs(output_dir)
+        pathlib.Path(output_dir).mkdir(parents=True)
 
     # don't overwrite the original clinical file
-    LOGGER.debug(f"Input clinical data: {os.path.realpath(input_clinical_file)}")
-    LOGGER.debug(f"Output clinical data: {os.path.realpath(output_clinical_filepath)}")
-    if os.path.realpath(input_clinical_file) == os.path.realpath(output_clinical_filepath):
+    real_input_clinical_file = pathlib.Path(input_clinical_file).resolve()
+    real_output_clinical_file = output_clinical_filepath.resolve()
+    LOGGER.debug(f"Input clinical data: {real_input_clinical_file}")
+    LOGGER.debug(f"Output clinical data: {real_output_clinical_file}")
+    if real_input_clinical_file == real_output_clinical_file:
         LOGGER.error("input and output clinical files map to the same file - exiting to avoid overwriting")
         sys.exit(1)
 
@@ -191,12 +193,13 @@ def generate_diversity_stats(clinical_data_file: str, diversity_dir: str, clinic
     LOGGER.debug(clinical_data)
 
     # read all the diversity files into a dataframe
-    diversity_filenames = [f for f in os.listdir(diversity_dir) if f.endswith(DIVERSITY_FILENAME_SUFFIX)]
+    diversity_filenames = [f for f in pathlib.Path(diversity_dir).iterdir() if str(f).endswith(DIVERSITY_FILENAME_SUFFIX)]
+    LOGGER.debug(diversity_filenames)
     #diversity_filenames.sort() # Q: do I need this?
     diversity_data = pd.DataFrame()
     for diversity_filename in diversity_filenames:
-        code_name = diversity_filename.split(".")[0]
-        diversity_data[code_name] = pd.read_csv(os.path.join(diversity_dir, diversity_filename), header=None)
+        code_name = diversity_filename.parts[-1].split(".")[0]
+        diversity_data[code_name] = pd.read_csv(diversity_filename, header=None)
     LOGGER.debug("-- diversity data input --")
     LOGGER.debug(diversity_data)
 
@@ -210,8 +213,8 @@ def generate_diversity_stats(clinical_data_file: str, diversity_dir: str, clinic
     LOGGER.debug(diversity_std)
 
     if verbose:
-        diversity_mean.to_csv(os.path.join(output_dir, "diversity_mean.csv"))
-        diversity_std.to_csv(os.path.join(output_dir, "diversity_std.csv"))
+        diversity_mean.to_csv(pathlib.Path(output_dir, "diversity_mean.csv"))
+        diversity_std.to_csv(pathlib.Path(output_dir, "diversity_std.csv"))
 
     clinical_data["averages"] = diversity_mean
     clinical_data["std"] = diversity_std
@@ -259,8 +262,8 @@ def generate_distance_scatter_plots(code_names:list, distance_dir: str, output_d
 
     for code_name in code_names:
         LOGGER.debug(f"scatter plot {code_name}")
-        distance_file = os.path.join(distance_dir, f"{code_name}{DISTANCE_FILE_SUFFIX}")
-        if not os.path.exists(distance_file):
+        distance_file = pathlib.Path(distance_dir, f"{code_name}{DISTANCE_FILE_SUFFIX}")
+        if not distance_file.exists():
             LOGGER.warning(f"missing distance file: {distance_file} .. skipping plot")
             continue
 
@@ -269,18 +272,18 @@ def generate_distance_scatter_plots(code_names:list, distance_dir: str, output_d
         LOGGER.debug(distance_data)
         plot = distance_data.plot.scatter(x=0, y=1, title=f"{code_name} distance matrix")
         fig = plot.get_figure()
-        fig.savefig(os.path.join(output_dir, f"{code_name}_distance.png"))
+        fig.savefig(pathlib.Path(output_dir, f"{code_name}_distance.png"))
 
         # matplotlib version - TODO - pick one
         matplotlib.use("Agg") # non-GUI
         plt.scatter(distance_data.x, distance_data.y)
         plt.title(f"{code_name} distance matrix - matplotlib")
-        plt.savefig(os.path.join(output_dir, f"{code_name}_matplotlib_distance.png"))
+        plt.savefig(pathlib.Path(output_dir, f"{code_name}_matplotlib_distance.png"))
 
         # seaborn version - TODO - pick one
         sns.set_style("whitegrid")
         splot = sns.lmplot(data=distance_data, x="x", y="y", fit_reg=False)
-        splot.savefig(os.path.join(output_dir, f"{code_name}_seaborn_distance.png")) 
+        splot.savefig(pathlib.Path(output_dir, f"{code_name}_seaborn_distance.png")) 
 
 
 #
@@ -297,9 +300,8 @@ def _setup_logger(debug: bool, logfile: str) -> None:
         debug (bool): if level should be set to debug
         logfile (str): log file name.
     """
-    log_dir = os.path.dirname(logfile)
-    if log_dir and not os.path.exists(log_dir):
-        os.makedirs(log_dir)
+    log_dir = pathlib.Path(logfile).parent
+    pathlib.Path(log_dir).mkdir(exist_ok=True, parents=True)
 
     LOGGER.setLevel(logging.DEBUG)  # base level
 
