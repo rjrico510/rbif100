@@ -26,6 +26,8 @@ outputs:
 
 import argparse
 import logging
+import matplotlib
+import matplotlib.pyplot as plt
 import os
 import pandas as pd
 import sys
@@ -221,19 +223,17 @@ def generate_diversity_stats(clinical_data_file: str, diversity_dir: str, clinic
     return clinical_data
 
 
-def generate_distance_scatter_plots(clinical_data:pd.DataFrame, distance_dir: str, output_dir: str, num_high: int=2 , num_low: int=1, verbose: bool=False) -> None:
-    """Generate scatter plots from N highest and M lowest average diversity scores
+def get_extreme_diversity_samples(clinical_data:pd.DataFrame, num_high: int=2 , num_low: int=1) -> list:
+    """Get extreme samples (high/low diversity averages)
 
     Args:
         clinical_data (pd.DataFrame): full set of clinical data with average diversity score
-        distance_dir (str): directory of distance data
-        output_dir (str): output directory
         num_high (int, optional): number of highest average scores to plot.   Defaults to 2.
-        num_low (int, optional): number of lowest average scores to plot.   Defaults to 1
-        verbose (bool, optional): Write additional logging information. Defaults to False.
-    """
-    DISTANCE_FILE_SUFFIX = ".distance.txt"
+        num_low (int, optional): number of lowest average scores to plot.   Defaults to 1.
 
+    Returns:
+        list: sample code names with N highest/M lowest diversity averages
+    """
     clinical_data.sort_values("averages", inplace=True, ascending=False)
     clinical_data_to_plot = pd.concat([clinical_data.head(num_high), clinical_data.tail(num_low)])
     clinical_data_to_plot.drop_duplicates(inplace=True) # cleanup in case the ranges overlap
@@ -241,24 +241,40 @@ def generate_distance_scatter_plots(clinical_data:pd.DataFrame, distance_dir: st
     LOGGER.debug("-- clinical data to plot --")
     LOGGER.debug(clinical_data_to_plot)
 
-    for code_name in clinical_data_to_plot.index:
+    return list(clinical_data_to_plot.index)
+
+
+
+def generate_distance_scatter_plots(code_names:list, distance_dir: str, output_dir: str, verbose: bool=False) -> None:
+    """Generate scatter plots list of samples
+
+    Args:
+        code_names (list): names of samples to plot
+        distance_dir (str): directory of distance data
+        output_dir (str): output directory
+        verbose (bool, optional): Write additional logging information. Defaults to False.
+    """
+    DISTANCE_FILE_SUFFIX = ".distance.txt"
+
+    for code_name in code_names:
         LOGGER.debug(f"scatter plot {code_name}")
         distance_file = os.path.join(distance_dir, f"{code_name}{DISTANCE_FILE_SUFFIX}")
         if not os.path.exists(distance_file):
             LOGGER.warning(f"missing distance file: {distance_file} .. skipping plot")
             continue
 
-        distance_data = pd.read_csv(distance_file, header=None)
+        distance_data = pd.read_csv(distance_file, header=None, names=["x", "y"])
         LOGGER.debug("-- distance data --")
         LOGGER.debug(distance_data)
-        plot = distance_data.plot.scatter(x=0, y=1, title=f"{code_name} distance data")
+        plot = distance_data.plot.scatter(x=0, y=1, title=f"{code_name} distance matrix")
         fig = plot.get_figure()
         fig.savefig(os.path.join(output_dir, f"{code_name}_distance.png"))
 
-
-
-
-
+        # matplotlib version - TODO - pick one
+        matplotlib.use("Agg") # non-GUI
+        plt.scatter(distance_data.x, distance_data.y)
+        plt.title(f"{code_name} distance matrix - matplotlib")
+        plt.savefig(os.path.join(output_dir, f"{code_name}_matplotlib_distance.png"))
 
 
 #
@@ -310,8 +326,10 @@ def main():
     clinical_output_file = setup_inputs_outputs(args.clinical_data_file, args.diversity_dir, args.distances_dir, args.output_dir, args.clinical_data_output, args.force)
     LOGGER.info("-- Generate Diversity Statistics --")
     clinical_data = generate_diversity_stats(args.clinical_data_file, args.diversity_dir, clinical_output_file, args.output_dir, args.verbose)
+    LOGGER.info("-- Get clinical samples to plot --")
+    code_names = get_extreme_diversity_samples(clinical_data, args.num_low, args.num_high)
     LOGGER.info("-- Generate scatterplots --")
-    generate_distance_scatter_plots(clinical_data, args.distances_dir, args.output_dir, args.num_low, args.num_high, args.verbose)
+    generate_distance_scatter_plots(code_names, args.distances_dir, args.output_dir, args.verbose)
 
 if __name__ == "__main__":
     main()
