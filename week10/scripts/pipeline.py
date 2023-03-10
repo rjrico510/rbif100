@@ -13,6 +13,7 @@ Discoverer	Location	Diamater (mm)	Environment	Status	code_name
 (2) folder of diversity scores
 - file names within the folder: <code_name>.diversity.txt
 - text files with a single column of values; no header
+- all files have the same # data points
 (3) folder of distance scores
 - file names within the folder: <code_name>.distance.txt
 - csv files with two columns; no header
@@ -24,6 +25,7 @@ outputs:
 """
 
 import argparse
+import glob
 import logging
 import numpy as np
 import os
@@ -53,10 +55,10 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("diversity_dir", help="directory of diversity scores")
     parser.add_argument("distances_dir", help="directory of distances data")
     parser.add_argument(
-        "-m", "--min", default=DEFAULT_MIN_AVE, help=f"number of lowest average samples to plot (default {DEFAULT_MIN_AVE})"
+        "-m", "--min", default=DEFAULT_MIN_AVE, type=int, help=f"number of lowest average samples to plot (default {DEFAULT_MIN_AVE})"
     )
     parser.add_argument(
-        "-n", "--max", default=DEFAULT_MAX_AVE, help=f"number of highest average samples to plot (default {DEFAULT_MAX_AVE})"
+        "-n", "--max", default=DEFAULT_MAX_AVE, type=int, help=f"number of highest average samples to plot (default {DEFAULT_MAX_AVE})"
     )
     parser.add_argument(
         "-o",
@@ -106,8 +108,8 @@ def parse_arguments() -> argparse.Namespace:
     return args
 
 
-def validate_inputs_outputs(input_clinical_file: str, diversity_dir: str, distances_dir: str, output_dir: str, output_clinical_file: str, force: bool=False) -> None:
-    """validate input/output
+def setup_inputs_outputs(input_clinical_file: str, diversity_dir: str, distances_dir: str, output_dir: str, output_clinical_file: str, force: bool=False) -> str:
+    """configure and validate input/output
 
     Args:
         input_clinical_file (str): input clinical data file (can be a path)
@@ -116,6 +118,9 @@ def validate_inputs_outputs(input_clinical_file: str, diversity_dir: str, distan
         output_dir (str): output directory
         output_clinical_file (str): output clinical file name within output directory
         force (bool, optional): Overwrite existing data. Defaults to False.
+
+    Returns:
+        str: full path to clinical data output file based on inputs
     """
 
     # is the input present?
@@ -145,28 +150,70 @@ def validate_inputs_outputs(input_clinical_file: str, diversity_dir: str, distan
         os.makedirs(output_dir)
 
     # don't overwrite the original clinical file
+    LOGGER.debug(f"Input clinical data: {os.path.realpath(input_clinical_file)}")
+    LOGGER.debug(f"Output clinical data: {os.path.realpath(output_clinical_filepath)}")
     if os.path.realpath(input_clinical_file) == os.path.realpath(output_clinical_filepath):
         LOGGER.error("input and output clinical files map to the same file - exiting to avoid overwriting")
         sys.exit(1)
 
+    # return the clinical output file full path
+    return output_clinical_filepath
 
-def generate_diversity_stats(clinical_data_file: str, diversity_dir: str, clinical_data_output: str) -> pd.DataFrame:
+
+def generate_diversity_stats(clinical_data_file: str, diversity_dir: str, clinical_data_output: str, output_dir: str=None, verbose: bool=False) -> pd.DataFrame:
     """Generate mean/std dev for each diversity data set and add to clinical data to create a new file
 
     Args:
         clinical_data (str): input clinical file
         diversity_dir (str): input directory of diversity files
         clinical_data_output (str): output clinical file
+        output_dir (str, optional): output for any additional reporting.   Required if verbose=True.   Defaults to None.
+        verbose (bool, optional): Write additional logging information. Defaults to False.
 
     Returns:
         pd.DataFrame: clinical data plus statistical data as a dataframe
     """
+
+    if verbose and output_dir is None:
+        raise ValueError("If verbose is set, you must specify output_dir")
+
+    DIVERSITY_FILENAME_ROOT = ".diversity.txt"
+
     clinical_data = pd.read_csv(clinical_data_file, sep="\t")
+    clinical_data.set_index("code_name", drop=False, inplace=True)
+    clinical_data.sort_index(ascending=True, inplace=True) # Q: do I even need this?
+    LOGGER.debug("-- clinical data input --")
+    LOGGER.debug(clinical_data)
 
+    # read all the diversity files into a dataframe
+    diversity_filenames = [f for f in os.listdir(diversity_dir) if f.endswith(DIVERSITY_FILENAME_ROOT)]
+    #diversity_filenames.sort()
+    diversity_data = pd.DataFrame()
+    for diversity_filename in diversity_filenames:
+        code_name = diversity_filename.split(".")[0]
+        diversity_data[code_name] = pd.read_csv(os.path.join(diversity_dir, diversity_filename), header=None)
+    LOGGER.debug("-- diversity data input --")
+    LOGGER.debug(diversity_data)
 
+    diversity_mean = diversity_data.mean()
+    diversity_std = diversity_data.std()
 
+    LOGGER.debug("-- mean --")
+    LOGGER.debug(diversity_mean)
+    LOGGER.debug("-- std dev --")
+    LOGGER.debug(diversity_std)
 
-    clinical_data.to_csv(clinical_data_output, sep="\t", index=False)
+    if verbose:
+        diversity_mean.to_csv(os.path.join(output_dir, "diversity_mean.csv"))
+        diversity_std.to_csv(os.path.join(output_dir, "diversity_std.csv"))
+
+    clinical_data["averages"] = diversity_mean
+    clinical_data["std"] = diversity_std
+
+    LOGGER.debug("-- clinical data output --")
+    LOGGER.debug(clinical_data)
+
+    clinical_data.to_csv(clinical_data_output, sep="\t", index=False, float_format='%.3f')
 
     return clinical_data
 
@@ -216,10 +263,10 @@ def main():
     # EC - perform k-means clustering on the 3 plots & color by cluster (use elbow method to determine # clusters)
     """
     args = parse_arguments()
-    LOGGER.info("-- Validate input/output --")
-    validate_inputs_outputs(args.clinical_data_file, args.diversity_dir, args.distances_dir, args.output_dir, args.clinical_data_output, args.force)
+    LOGGER.info("-- Setup input/output --")
+    clinical_output_file = setup_inputs_outputs(args.clinical_data_file, args.diversity_dir, args.distances_dir, args.output_dir, args.clinical_data_output, args.force)
     LOGGER.info("-- Generate Diversity Statistics --")
-    clinical_data = generate_diversity_stats(args.clinical_data_file, args.diversity_dir, args.clinical_data_output)
+    clinical_data = generate_diversity_stats(args.clinical_data_file, args.diversity_dir, clinical_output_file, args.output_dir, args.verbose)
 
 if __name__ == "__main__":
     main()
