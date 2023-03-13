@@ -267,6 +267,9 @@ def generate_distance_scatter_plots(code_names:list, distance_dir: str, output_d
             LOGGER.warning(f"missing distance file: {distance_file} .. skipping plot")
             continue
 
+        # TODO - save as pdf not png
+        # TODO - change name to just {code_name}.pdf
+        # TODO - close plots when done
         distance_data = pd.read_csv(distance_file, header=None, names=["x", "y"])
         LOGGER.debug("-- distance data --")
         LOGGER.debug(distance_data)
