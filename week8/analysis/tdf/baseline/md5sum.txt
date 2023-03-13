@@ -1,2 +1,2 @@
-98fdc31f760775fef2d38dbf6c421622  TDF_gene_AA.fasta
+3381b03908820fe370974253905b8616  TDF_gene_AA.fasta
 636325f435806d82d97685d5a3dcbd54  TDF_homology_list.txt

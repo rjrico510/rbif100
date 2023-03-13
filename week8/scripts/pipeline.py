@@ -203,7 +203,7 @@ def get_fasta(
     with fasta_file.open(mode="w") as f:
         f.write(f">{data['desc']}\n")
         f.write(f"{data['seq']}\n")
-        f.write(f">{'AA'}\n") # TODO - better header?
+        f.write(f">{ensembl_gene_id}:longest_ORF:AA\n")
         f.write(f"{str(aa)}\n")
 
 
