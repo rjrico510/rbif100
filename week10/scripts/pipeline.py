@@ -27,7 +27,6 @@ outputs:
 import argparse
 import logging
 import matplotlib
-import matplotlib.pyplot as plt
 import pathlib
 import pandas as pd
 import seaborn as sns
@@ -195,7 +194,6 @@ def generate_diversity_stats(clinical_data_file: str, diversity_dir: str, clinic
     # read all the diversity files into a dataframe
     diversity_filenames = [f for f in pathlib.Path(diversity_dir).iterdir() if str(f).endswith(DIVERSITY_FILENAME_SUFFIX)]
     LOGGER.debug(diversity_filenames)
-    #diversity_filenames.sort() # Q: do I need this?
     diversity_data = pd.DataFrame()
     for diversity_filename in diversity_filenames:
         code_name = diversity_filename.parts[-1].split(".")[0]
@@ -250,7 +248,7 @@ def get_extreme_diversity_samples(clinical_data:pd.DataFrame, num_high: int=2 , 
 
 
 def generate_distance_scatter_plots(code_names:list, distance_dir: str, output_dir: str, verbose: bool=False) -> None:
-    """Generate scatter plots list of samples
+    """Generate scatter plots as PDFs
 
     Args:
         code_names (list): names of samples to plot
@@ -259,6 +257,7 @@ def generate_distance_scatter_plots(code_names:list, distance_dir: str, output_d
         verbose (bool, optional): Write additional logging information. Defaults to False.
     """
     DISTANCE_FILE_SUFFIX = ".distance.txt"
+    matplotlib.use("pdf")
 
     for code_name in code_names:
         LOGGER.debug(f"scatter plot {code_name}")
@@ -267,26 +266,24 @@ def generate_distance_scatter_plots(code_names:list, distance_dir: str, output_d
             LOGGER.warning(f"missing distance file: {distance_file} .. skipping plot")
             continue
 
-        # TODO - save as pdf not png
-        # TODO - change name to just {code_name}.pdf
-        # TODO - close plots when done
         distance_data = pd.read_csv(distance_file, header=None, names=["x", "y"])
         LOGGER.debug("-- distance data --")
         LOGGER.debug(distance_data)
-        plot = distance_data.plot.scatter(x=0, y=1, title=f"{code_name} distance matrix")
-        fig = plot.get_figure()
-        fig.savefig(pathlib.Path(output_dir, f"{code_name}_distance.png"))
 
-        # matplotlib version - TODO - pick one
-        matplotlib.use("Agg") # non-GUI
-        plt.scatter(distance_data.x, distance_data.y)
-        plt.title(f"{code_name} distance matrix - matplotlib")
-        plt.savefig(pathlib.Path(output_dir, f"{code_name}_matplotlib_distance.png"))
-
-        # seaborn version - TODO - pick one
+        # TODO - change spot size
+        # TODO - consider dpi?
         sns.set_style("whitegrid")
-        splot = sns.lmplot(data=distance_data, x="x", y="y", fit_reg=False)
-        splot.savefig(pathlib.Path(output_dir, f"{code_name}_seaborn_distance.png")) 
+        pdf = matplotlib.backends.backend_pdf.PdfPages(pathlib.Path(output_dir, f"{code_name}.pdf"))
+        sns.lmplot(data=distance_data, x="x", y="y", fit_reg=False)
+        pdf.savefig()
+
+        # PDFs are non-deterministic since they include a creation date
+        # Eliminating that value so this is testable via checksums
+        d = pdf.infodict()
+        d["CreationDate"] = None # PDFs are non-deterministic otherwise
+        LOGGER.debug(d)
+
+        pdf.close()
 
 
 #
