@@ -257,7 +257,7 @@ def generate_distance_scatter_plots(code_names:list, distance_dir: str, output_d
         verbose (bool, optional): Write additional logging information. Defaults to False.
     """
     DISTANCE_FILE_SUFFIX = ".distance.txt"
-    matplotlib.use("pdf")
+    matplotlib.use("pdf") # non-GUI backend
 
     for code_name in code_names:
         LOGGER.debug(f"scatter plot {code_name}")
@@ -270,20 +270,16 @@ def generate_distance_scatter_plots(code_names:list, distance_dir: str, output_d
         LOGGER.debug("-- distance data --")
         LOGGER.debug(distance_data)
 
-        # TODO - change spot size
-        # TODO - consider dpi?
-        sns.set_style("whitegrid")
-        pdf = matplotlib.backends.backend_pdf.PdfPages(pathlib.Path(output_dir, f"{code_name}.pdf"))
-        sns.lmplot(data=distance_data, x="x", y="y", fit_reg=False)
-        pdf.savefig()
-
-        # PDFs are non-deterministic since they include a creation date
-        # Eliminating that value so this is testable via checksums
-        d = pdf.infodict()
-        d["CreationDate"] = None # PDFs are non-deterministic otherwise
-        LOGGER.debug(d)
-
-        pdf.close()
+        # plot
+        sns.set_style("darkgrid")
+        sns.set_palette("colorblind")
+        sns.set(font_scale=0.6)
+        dplot = sns.lmplot(data=distance_data, x="x", y="y", fit_reg=False, scatter_kws={"s": 10, 'linewidths':0.5})
+        dplot.set(title=code_name)
+        dplot.tight_layout()
+        pdf_metadata = {"CreationDate": None} # removing field which makes PDFs non-deterministic
+        dplot.savefig(pathlib.Path(output_dir, f"{code_name}.pdf"), metadata=pdf_metadata)
+        matplotlib.pyplot.close()
 
 
 #
