@@ -17,7 +17,7 @@ Given the following inputs:
 Create a script `pipeline.py` which performs the following:
 - Generates the mean and standard deviation of the diversity scores per species, and add to an updated clinical data file (this will not overwrite the existing file)
 - Identify the top N and lowest M average diversity samples (defaults to N=2, M=1) and generate a PDF scatter plot of the distance data for each
-- Generate a k-means plot for each
+- Generate K-Means plots and elbow plot for each
 
 ## Usage
 
@@ -63,6 +63,7 @@ The following commands will run the assignment:
 - distanceFiles - input: directory of distance files
 - clinical_data_with_diversity.txt - output: clinical data file with additional statistics
 - buffalo/fox/lion.pdf - output: scatter plots of distance data
+- buffalo/fox/lion_kmeans.pdf - output: K-Means cluster plots (k=1-8) and elbow plot
 - pipeline.log - output: log file
 - run.sh - script used to run the data
 
@@ -71,4 +72,6 @@ The following commands will run the assignment:
 - The data was tested on one tiny test dataset for debugging:
   - https://github.com/rjrico510/rbif100/tree/main/week10/data/tinytest
 - The creation date was removed from the PDF metadata to make PDF creation deterministic
-  - The code was being tested by comparing checksums with a baseline; this wouldn't work otherwise 
+  - The code was being tested by comparing checksums with a baseline; this wouldn't work otherwise
+- There is no special affordance for K-Means failing to converge.
+- The number of K-Means clusters is 1-8.    This could be parameterized.
