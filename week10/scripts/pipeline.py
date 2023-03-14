@@ -187,7 +187,6 @@ def generate_diversity_stats(clinical_data_file: str, diversity_dir: str, clinic
     # read the clinical data file - index by code name
     clinical_data = pd.read_csv(clinical_data_file, sep="\t")
     clinical_data.set_index(CLINICAL_INDEX, drop=False, inplace=True)
-    clinical_data.sort_index(ascending=True, inplace=True) # TODO - Q: do I need this?
     LOGGER.debug("-- clinical data input --")
     LOGGER.debug(clinical_data)
 
