@@ -309,7 +309,7 @@ def _kmeans_plots(code_name:str, distance_data:pd.DataFrame, output_dir:str, max
 
     subplots = []
     for nclusters in range(2, max_clusters + 1):
-        kmeans = sklearn.cluster.KMeans(nclusters)
+        kmeans = sklearn.cluster.KMeans(nclusters, random_state=0)
         cluster_labels = kmeans.fit_predict(distance_data)
         distance_data[f"cluster_{nclusters}"] = cluster_labels
 
