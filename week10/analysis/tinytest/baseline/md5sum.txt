@@ -1,3 +1,5 @@
-340bedb66b2ca7c29442c5abf29c3f49  addax.pdf
-8e8ffc46506a608949155fbf21da2248  badger.pdf
+060ff0762fc0c86430d422b93a84568b  addax_kmeans.pdf
+23cc183286eb96975c341df79dfc184a  addax.pdf
+6d34d4aab000f2479a0917ed82eb9a07  badger_kmeans.pdf
+812eadf334c35b56517519bd50bdea18  badger.pdf
 49c578ca074f602d901bc50d6fa77abd  clinical_data_with_diversity.txt

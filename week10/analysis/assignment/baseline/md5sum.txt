@@ -1,4 +1,7 @@
-6dc6cbbbd5d0c545222572c16591cca5  buffalo.pdf
-fe8795187154150bd1ae4d3f8ec09122  fox.pdf
-63fb844e1254d57540210ba31540efb8  lion.pdf
+f018d32ab86db44223e777d8ddbfa9c7  buffalo_kmeans.pdf
+9f6d6b991950a241d4fb5536991dab58  buffalo.pdf
+f55e1496175d78d57b0e0cac494b5d87  fox_kmeans.pdf
+343f97262a0ecb6e80d033cc0e2972f1  fox.pdf
+5fa79566a39b22ae7a215cc14c60ad1b  lion_kmeans.pdf
+2b530a39bc27c5bb605c59abca37a31a  lion.pdf
 398b8c79e411d47e85173a8c50d9500a  clinical_data_with_diversity.txt
