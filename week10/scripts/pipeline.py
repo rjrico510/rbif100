@@ -287,9 +287,7 @@ def _scatter_plot(code_name:str, distance_data:pd.DataFrame, output_dir:str) -> 
         output_dir (str): output directory
     """
     matplotlib.use("pdf") # non-GUI backend
-    sns.set_style("darkgrid")
-    sns.set_palette("colorblind")
-    sns.set(font_scale=0.6)
+    sns.set(font_scale=0.6, palette="colorblind", style="darkgrid")
     dplot = sns.lmplot(data=distance_data, x="x", y="y", fit_reg=False, scatter_kws={"s": 10, 'linewidths':0.5})
     dplot.set(title=code_name)
     dplot.tight_layout()
@@ -316,10 +314,8 @@ def _kmeans_plots(code_name:str, distance_data:pd.DataFrame, output_dir:str, max
         distance_data[f"cluster_{nclusters}"] = cluster_labels
 
         # https://stackoverflow.com/questions/64277625/save-multiple-seaborn-plots-into-one-pdf-file
-        # TODO - figure out how sns.set_style actually works
+        sns.set(font_scale=0.6, style="darkgrid")
         _, ax = plt.subplots()
-        sns.set_style("darkgrid")
-        sns.set(font_scale=0.6)
         kplot = sns.scatterplot(data=distance_data, x="x", y="y", hue=f"cluster_{nclusters}", s=10, linewidths=0.5, palette="colorblind")
         kplot.set(title=f"{code_name} K-means # clusters: {nclusters}")
         kplot.legend(title="cluster")
