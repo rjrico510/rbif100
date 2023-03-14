@@ -29,8 +29,10 @@ import logging
 import matplotlib
 import matplotlib.backends.backend_pdf as backend_pdf
 import matplotlib.pyplot as plt
+import numpy as np
 import pathlib
 import pandas as pd
+import scipy.spatial.distance as sp_distance
 import seaborn as sns
 import sklearn.cluster
 import sys
@@ -308,9 +310,16 @@ def _kmeans_plots(code_name:str, distance_data:pd.DataFrame, output_dir:str, max
     matplotlib.use("pdf") # non-GUI backend
 
     subplots = []
-    for nclusters in range(2, max_clusters + 1):
+    distortions = [] # for elbow plot
+    for nclusters in range(1, max_clusters + 1):
+        # kmeans clustering
         kmeans = sklearn.cluster.KMeans(nclusters, random_state=0)
         cluster_labels = kmeans.fit_predict(distance_data)
+
+        # https://pythonprogramminglanguage.com/kmeans-elbow-method/
+        distortions.append(sum(np.min(sp_distance.cdist(distance_data.to_numpy(), kmeans.cluster_centers_), axis=1)) / distance_data.shape[0])
+
+        # add cluster data for plotting purposes
         distance_data[f"cluster_{nclusters}"] = cluster_labels
 
         # https://stackoverflow.com/questions/64277625/save-multiple-seaborn-plots-into-one-pdf-file
@@ -321,14 +330,20 @@ def _kmeans_plots(code_name:str, distance_data:pd.DataFrame, output_dir:str, max
         kplot.legend(title="cluster")
         subplots.append(ax)
 
-    # TODO - elbow plot
-
+    # make elbow plot
+    sns.set(font_scale=0.6, style="darkgrid")
+    _, ax = plt.subplots()
+    lplot = sns.lineplot(x=range(1, max_clusters + 1), y=distortions, palette="colorblind", marker="s", markersize=5)
+    lplot.set(title=f"{code_name} elbow plot", xlabel="# clusters", ylabel="distortion")
+    subplots.append(ax)
+    
+    # write cluster plots + elbow plot
     pdf_metadata = {"CreationDate": None} # removing field which makes PDFs non-deterministic
     pdf_file = pathlib.Path(output_dir, f"{code_name}_kmeans.pdf")
     with backend_pdf.PdfPages(pdf_file, metadata=pdf_metadata) as pdf:
         for p in subplots:
             pdf.savefig(p.figure)
-    plt.close()
+    plt.close('all')
 
 
 def _setup_logger(debug: bool, logfile: str) -> None:
