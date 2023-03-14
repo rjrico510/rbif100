@@ -28,8 +28,10 @@ import argparse
 import logging
 import matplotlib
 import pathlib
+import numpy as np
 import pandas as pd
 import seaborn as sns
+import sklearn.cluster
 import sys
 
 LOGGER = logging.getLogger(__name__)  # logger for entire module
@@ -246,8 +248,8 @@ def get_extreme_diversity_samples(clinical_data:pd.DataFrame, num_high: int=2 , 
 
 
 
-def generate_distance_scatter_plots(code_names:list, distance_dir: str, output_dir: str, verbose: bool=False) -> None:
-    """Generate scatter plots as PDFs
+def generate_plots(code_names:list, distance_dir: str, output_dir: str, verbose: bool=False) -> None:
+    """Generate all plots as PDFs
 
     Args:
         code_names (list): names of samples to plot
@@ -269,21 +271,52 @@ def generate_distance_scatter_plots(code_names:list, distance_dir: str, output_d
         LOGGER.debug("-- distance data --")
         LOGGER.debug(distance_data)
 
-        # plot
-        sns.set_style("darkgrid")
-        sns.set_palette("colorblind")
-        sns.set(font_scale=0.6)
-        dplot = sns.lmplot(data=distance_data, x="x", y="y", fit_reg=False, scatter_kws={"s": 10, 'linewidths':0.5})
-        dplot.set(title=code_name)
-        dplot.tight_layout()
-        pdf_metadata = {"CreationDate": None} # removing field which makes PDFs non-deterministic
-        dplot.savefig(pathlib.Path(output_dir, f"{code_name}.pdf"), metadata=pdf_metadata)
-        matplotlib.pyplot.close()
-
+        _scatter_plot(code_name, distance_data, output_dir)
+        _kmeans_plots(code_name, distance_data, output_dir)
 
 #
 # helper code
 #
+
+def _scatter_plot(code_name:str, distance_data:pd.DataFrame, output_dir:str) -> None:
+    """Generate scatter plot of distance data
+
+    Args:
+        code_name (str): code name 
+        distance_data (pd.DataFrame): distance data for the code name
+        output_dir (str): output directory
+    """
+    sns.set_style("darkgrid")
+    sns.set_palette("colorblind")
+    sns.set(font_scale=0.6)
+    dplot = sns.lmplot(data=distance_data, x="x", y="y", fit_reg=False, scatter_kws={"s": 10, 'linewidths':0.5})
+    dplot.set(title=code_name)
+    dplot.tight_layout()
+    pdf_metadata = {"CreationDate": None} # removing field which makes PDFs non-deterministic
+    dplot.savefig(pathlib.Path(output_dir, f"{code_name}.pdf"), metadata=pdf_metadata)
+    matplotlib.pyplot.close()
+
+
+def _kmeans_plots(code_name:str, distance_data:pd.DataFrame, output_dir:str) -> None:
+    """Generate K-means plot of distance data
+
+    Args:
+        code_name (str): code name 
+        distance_data (pd.DataFrame): distance data for the code name
+        output_dir (str): output directory
+    """
+
+    kmeans = sklearn.cluster.KMeans(3)
+    cluster_labels = kmeans.fit_predict(distance_data)
+    LOGGER.debug(f"cluster data {code_name}")
+    LOGGER.debug(cluster_labels)
+    distance_data["cluster"] = cluster_labels
+
+    LOGGER.debug(distance_data)
+
+    dplot = sns.lmplot(data=distance_data, x="x", y="y", fit_reg=False, hue="cluster")
+    dplot.set(title=f"{code_name} K-means 3")
+    dplot.savefig(pathlib.Path(output_dir, f"{code_name}_kmeans_3.png"))
 
 
 def _setup_logger(debug: bool, logfile: str) -> None:
@@ -325,8 +358,7 @@ def main():
     LOGGER.info("-- Get clinical samples to plot --")
     code_names = get_extreme_diversity_samples(clinical_data, args.num_low, args.num_high)
     LOGGER.info("-- Generate scatterplots --")
-    generate_distance_scatter_plots(code_names, args.distances_dir, args.output_dir, args.verbose)
-    #TODO - K-means
+    generate_plots(code_names, args.distances_dir, args.output_dir, args.verbose)
 
 if __name__ == "__main__":
     main()
