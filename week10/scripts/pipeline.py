@@ -184,10 +184,10 @@ def generate_diversity_stats(clinical_data_file: str, diversity_dir: str, clinic
     DIVERSITY_FILENAME_SUFFIX = ".diversity.txt"
     CLINICAL_INDEX = "code_name"
 
-    # read the clinical data file - index by 
+    # read the clinical data file - index by code name
     clinical_data = pd.read_csv(clinical_data_file, sep="\t")
     clinical_data.set_index(CLINICAL_INDEX, drop=False, inplace=True)
-    clinical_data.sort_index(ascending=True, inplace=True) # Q: do I need this?
+    clinical_data.sort_index(ascending=True, inplace=True) # TODO - Q: do I need this?
     LOGGER.debug("-- clinical data input --")
     LOGGER.debug(clinical_data)
 
@@ -317,13 +317,6 @@ def _setup_logger(debug: bool, logfile: str) -> None:
 
 def main():
     """main
-    # read in clinical_data.txt as a pandas dataframe
-    # - create 2 new columms (averages & std dev)
-    # for each diversity file
-    # - read in, append mean/stddev (use pandas/numpy)
-    # find top 2 & lowest 1 average diversity
-    # - for these 3, generate scatter plot from distance file
-    # EC - perform k-means clustering on the 3 plots & color by cluster (use elbow method to determine # clusters)
     """
     args = parse_arguments()
     LOGGER.info("-- Setup input/output --")
@@ -334,6 +327,7 @@ def main():
     code_names = get_extreme_diversity_samples(clinical_data, args.num_low, args.num_high)
     LOGGER.info("-- Generate scatterplots --")
     generate_distance_scatter_plots(code_names, args.distances_dir, args.output_dir, args.verbose)
+    #TODO - K-means
 
 if __name__ == "__main__":
     main()
