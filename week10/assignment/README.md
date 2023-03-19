@@ -75,3 +75,5 @@ The following commands will run the assignment:
   - The code was being tested by comparing checksums with a baseline; this wouldn't work otherwise
 - There is no special affordance for K-Means failing to converge.
 - The number of K-Means clusters is 1-8.    This could be parameterized.
+- The I/O was all pulled into pathlib.Path objects - not sure if that made things simpler or not
+- There is a LOT of logging - was useful for debugging but makes the code a bit harder to navigate

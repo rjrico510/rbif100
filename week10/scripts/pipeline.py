@@ -36,8 +36,23 @@ import scipy.spatial.distance as sp_distance
 import seaborn as sns
 import sklearn.cluster
 import sys
+import typing
 
 LOGGER = logging.getLogger(__name__)  # logger for entire module
+
+class InputFiles(typing.NamedTuple):
+    """input files"""
+
+    clinical_file: pathlib.Path
+    diversity_dir: pathlib.Path
+    distances_dir: pathlib.Path
+
+
+class OutputFiles(typing.NamedTuple):
+    """output files"""
+
+    clinical_file: pathlib.Path
+    output_dir: pathlib.Path
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -115,7 +130,7 @@ def parse_arguments() -> argparse.Namespace:
     return args
 
 
-def setup_inputs_outputs(input_clinical_file: str, diversity_dir: str, distances_dir: str, output_dir: str, output_clinical_file: str, force: bool=False) -> pathlib.Path:
+def setup_inputs_outputs(input_clinical_file: str, diversity_dir: str, distances_dir: str, output_dir: str, output_clinical_file: str, force: bool=False) -> tuple:
     """configure and validate input/output
 
     Args:
@@ -127,7 +142,7 @@ def setup_inputs_outputs(input_clinical_file: str, diversity_dir: str, distances
         force (bool, optional): Overwrite existing data. Defaults to False.
 
     Returns:
-        pathlib.Path: full path to clinical data output file based on inputs
+        tuple: (InputFiles, OutputFiles)
     """
 
     # is the input present?
@@ -166,17 +181,19 @@ def setup_inputs_outputs(input_clinical_file: str, diversity_dir: str, distances
         sys.exit(1)
 
     # return the clinical output file full path
-    return output_clinical_filepath
+    inputs = InputFiles(clinical_file=real_input_clinical_file, diversity_dir=pathlib.Path(diversity_dir), distances_dir=pathlib.Path(distances_dir))
+    outputs = OutputFiles(clinical_file=real_output_clinical_file, output_dir=pathlib.Path(output_dir))
+    return (inputs, outputs)
 
 
-def generate_diversity_stats(clinical_data_file: str, diversity_dir: str, clinical_data_output: str, output_dir: str=None, verbose: bool=False) -> pd.DataFrame:
+def generate_diversity_stats(clinical_data_file: pathlib.Path, diversity_dir: pathlib.Path, clinical_data_output: pathlib.Path, output_dir: pathlib.Path=None, verbose: bool=False) -> pd.DataFrame:
     """Generate mean/std dev for each diversity data set and add to clinical data to create a new file
 
     Args:
-        clinical_data (str): input clinical file
-        diversity_dir (str): input directory of diversity files
-        clinical_data_output (str): output clinical file
-        output_dir (str, optional): output for any additional reporting.   Required if verbose=True.   Defaults to None.
+        clinical_data (pathlib.Path): input clinical file
+        diversity_dir (pathlib.Path): input directory of diversity files
+        clinical_data_output (pathlib.Path): output clinical file
+        output_dir (pathlib.Path, optional): output for any additional reporting.   Required if verbose=True.   Defaults to None.
         verbose (bool, optional): Write additional logging information. Defaults to False.
 
     Returns:
@@ -196,7 +213,7 @@ def generate_diversity_stats(clinical_data_file: str, diversity_dir: str, clinic
     LOGGER.debug(clinical_data)
 
     # read all the diversity files into a dataframe
-    diversity_filenames = [f for f in pathlib.Path(diversity_dir).iterdir() if str(f).endswith(DIVERSITY_FILENAME_SUFFIX)]
+    diversity_filenames = [f for f in diversity_dir.iterdir() if str(f).endswith(DIVERSITY_FILENAME_SUFFIX)]
     LOGGER.debug(diversity_filenames)
     diversity_data = pd.DataFrame()
     for diversity_filename in diversity_filenames:
@@ -251,19 +268,19 @@ def get_extreme_diversity_samples(clinical_data:pd.DataFrame, num_high: int=2 , 
 
 
 
-def generate_plots(code_names:list, distance_dir: str, output_dir: str, verbose: bool=False) -> None:
+def generate_plots(code_names:list, distance_dir: pathlib.Path, output_dir: pathlib.Path, verbose: bool=False) -> None:
     """Generate all plots as PDFs
 
     Args:
         code_names (list): names of samples to plot
-        distance_dir (str): directory of distance data
-        output_dir (str): output directory
+        distance_dir (pathlib.Path): directory of distance data
+        output_dir (pathlib.Path): output directory
         verbose (bool, optional): Write additional logging information. Defaults to False.
     """
     DISTANCE_FILE_SUFFIX = ".distance.txt"
 
     for code_name in code_names:
-        LOGGER.debug(f"scatter plot {code_name}")
+        LOGGER.info(f"plotting {code_name} ...")
         distance_file = pathlib.Path(distance_dir, f"{code_name}{DISTANCE_FILE_SUFFIX}")
         if not distance_file.exists():
             LOGGER.warning(f"missing distance file: {distance_file} .. skipping plot")
@@ -280,13 +297,13 @@ def generate_plots(code_names:list, distance_dir: str, output_dir: str, verbose:
 # helper code
 #
 
-def _scatter_plot(code_name:str, distance_data:pd.DataFrame, output_dir:str) -> None:
+def _scatter_plot(code_name:str, distance_data:pd.DataFrame, output_dir:pathlib.Path) -> None:
     """Generate scatter plot of distance data
 
     Args:
         code_name (str): code name 
         distance_data (pd.DataFrame): distance data for the code name
-        output_dir (str): output directory
+        output_dir (pathlib.Path): output directory
     """
     matplotlib.use("pdf") # non-GUI backend
     sns.set(font_scale=0.6, palette="colorblind", style="darkgrid")
@@ -298,13 +315,13 @@ def _scatter_plot(code_name:str, distance_data:pd.DataFrame, output_dir:str) -> 
     plt.close()
 
 
-def _kmeans_plots(code_name:str, distance_data:pd.DataFrame, output_dir:str, max_clusters: int=8) -> None:
+def _kmeans_plots(code_name:str, distance_data:pd.DataFrame, output_dir:pathlib.Path, max_clusters: int=8) -> None:
     """Generate K-means plot of distance data
 
     Args:
         code_name (str): code name 
         distance_data (pd.DataFrame): distance data for the code name
-        output_dir (str): output directory
+        output_dir (pathlib.Path): output directory
         max_clusters (int, optional): maximum number of clusters (defaults to 8)
     """
     matplotlib.use("pdf") # non-GUI backend
@@ -379,13 +396,14 @@ def main():
     """
     args = parse_arguments()
     LOGGER.info("-- Setup input/output --")
-    clinical_output_file = setup_inputs_outputs(args.clinical_data_file, args.diversity_dir, args.distances_dir, args.output_dir, args.clinical_data_output, args.force)
+    (inputs, outputs) = setup_inputs_outputs(args.clinical_data_file, args.diversity_dir, args.distances_dir, args.output_dir, args.clinical_data_output, args.force)
     LOGGER.info("-- Generate Diversity Statistics --")
-    clinical_data = generate_diversity_stats(args.clinical_data_file, args.diversity_dir, clinical_output_file, args.output_dir, args.verbose)
+    clinical_data = generate_diversity_stats(inputs.clinical_file, inputs.diversity_dir, outputs.clinical_file, outputs.output_dir, args.verbose)
     LOGGER.info("-- Get clinical samples to plot --")
     code_names = get_extreme_diversity_samples(clinical_data, args.num_low, args.num_high)
-    LOGGER.info("-- Generate scatterplots --")
-    generate_plots(code_names, args.distances_dir, args.output_dir, args.verbose)
+    LOGGER.info("-- Generate plots --")
+    generate_plots(code_names, inputs.distances_dir, outputs.output_dir, args.verbose)
+    LOGGER.info("-- DONE --")
 
 if __name__ == "__main__":
     main()
