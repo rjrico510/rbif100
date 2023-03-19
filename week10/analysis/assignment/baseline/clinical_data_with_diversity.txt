@@ -1,0 +1,51 @@
+Discoverer	Location	Diamater (mm)	Environment	Status	code_name	averages	std
+Kerr	New Jersey	68	River	Sequenced	addax	7.431	4.216
+Schacher	Sweden	44	Sewage	Sequenced	badger	7.521	4.297
+No	Florida	6	River	Sequenced	basilisk	7.346	4.455
+Farrior	New Jersey	75	River	Sequenced	bat	7.524	4.286
+Look	Florida	66	Sewage	Sequenced	bear	7.305	4.299
+Acosta	Staten Island	64	Swamp	Not sequenced	beetle	7.692	4.360
+Corpus	Staten Island	78	Swamp	Sequenced	budgerigar	7.487	4.334
+Barrette	Staten Island	19	River	Sequenced	buffalo	22.379	4.273
+Mauricio	Florida	57	River	Sequenced	bull	7.315	4.311
+Kelleher	New Jersey	26	Swamp	Not sequenced	bunny	7.511	4.321
+Sambrano	Sweden	72	Sewage	Sequenced	camel	7.483	4.414
+Rivet	Sweden	26	Swamp	Sequenced	chicken	7.369	4.298
+Innis	New Jersey	15	Sewage	Not sequenced	cow	7.437	4.292
+Bock	Staten Island	32	River	Sequenced	coyote	7.586	4.364
+Noonan	Florida	80	Sewage	Sequenced	deer	7.582	4.327
+Notter	Florida	41	Swamp	Not sequenced	dingo	7.566	4.400
+Lalor	Florida	19	Swamp	Not sequenced	dog	7.442	4.228
+Forness	New Jersey	30	Sewage	Sequenced	dromedary	7.456	4.295
+Snuggs	Sweden	39	Swamp	Sequenced	eland	7.497	4.383
+Breton	Staten Island	42	Swamp	Sequenced	elephant	7.609	4.418
+Klump	New Jersey	62	Swamp	Not sequenced	finch	7.439	4.374
+Vanderburg	Sweden	26	River	Sequenced	fox	25.099	2.912
+Gorham	New Jersey	24	Sewage	Sequenced	goat	7.383	4.281
+Mccafferty	Florida	21	Sewage	Sequenced	gopher	7.631	4.373
+Landey	Florida	30	River	Sequenced	gorilla	7.469	4.314
+Gies	New Jersey	47	River	Sequenced	groundhog	7.482	4.411
+Sandoz	Sweden	5	Swamp	Not sequenced	highland	7.535	4.337
+Elridge	New Jersey	55	Swamp	Sequenced	impala	7.635	4.327
+Blanch	Staten Island	48	Swamp	Sequenced	kangaroo	7.641	4.303
+Gulino	New Jersey	74	Swamp	Sequenced	kitten	7.498	4.257
+Kesner	New Jersey	28	Sewage	Sequenced	lamb	7.643	4.324
+Labrie	Florida	17	Sewage	Not sequenced	lion	7.240	4.368
+Dorrough	Staten Island	4	Sewage	Sequenced	lizard	7.517	4.347
+Knighten	New Jersey	25	River	Not sequenced	lovebird	7.566	4.242
+Frew	New Jersey	58	Swamp	Not sequenced	mongoose	7.395	4.314
+Tilton	Sweden	71	River	Sequenced	oryx	7.718	4.296
+Pickron	Sweden	55	Sewage	Sequenced	panther	7.602	4.286
+Oommen	Sweden	35	River	Sequenced	parrot	7.520	4.358
+Twine	Sweden	56	Sewage	Sequenced	peccary	7.358	4.272
+Carstensen	Staten Island	65	Sewage	Sequenced	pronghorn	7.265	4.306
+Marchal	Florida	80	Swamp	Sequenced	puma	7.638	4.400
+Beer	Staten Island	40	Sewage	Not sequenced	salamander	7.498	4.381
+Urenda	Sweden	78	Swamp	Not sequenced	sheep	7.618	4.294
+Rule	Sweden	46	River	Sequenced	snake	7.595	4.329
+Mohamed	Florida	5	Swamp	Sequenced	snowy	7.550	4.275
+Hieber	New Jersey	60	River	Sequenced	springbok	7.439	4.282
+Bush	Staten Island	20	River	Not sequenced	turtle	7.700	4.286
+Sangster	Sweden	14	River	Sequenced	walrus	7.661	4.355
+Critchlow	Staten Island	33	River	Not sequenced	warthog	7.582	4.333
+Bonura	Staten Island	66	Sewage	Sequenced	waterbuck	7.331	4.392
