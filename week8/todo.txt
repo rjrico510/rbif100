@@ -1,7 +1,0 @@
-(1) use mygene DB rest API to get ensembl ID for gene MC1R
-(2a) use the ensembl ID to get the nucleotide sequence data for MCR1 via rest API -> write to fasta
-(2b) find longest open reading frame & convert DNA -> AA & write to the same fasta
-- use any tool you like that does not require a pip install to get the longest open reading frame
-(An open reading frame, as related to genomics, is a portion of a DNA sequence that does not include a stop codon)
-- use biopython (Bio.Seq import Seq) to convert the nucleotide sequence to AA
-(3) write unique list of species w/ genes homologous to MC1R to mc1r_homology_list.txt
