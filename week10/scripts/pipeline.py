@@ -40,6 +40,7 @@ import typing
 
 LOGGER = logging.getLogger(__name__)  # logger for entire module
 
+
 class InputFiles(typing.NamedTuple):
     """input files"""
 
@@ -75,10 +76,20 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("diversity_dir", help="directory of diversity scores")
     parser.add_argument("distances_dir", help="directory of distances data")
     parser.add_argument(
-        "-m", "--num-low", dest="num_high", default=DEFAULT_NUM_LOW, type=int, help=f"number of lowest average samples to plot (default {DEFAULT_NUM_LOW})"
+        "-m",
+        "--num-low",
+        dest="num_high",
+        default=DEFAULT_NUM_LOW,
+        type=int,
+        help=f"number of lowest average samples to plot (default {DEFAULT_NUM_LOW})",
     )
     parser.add_argument(
-        "-n", "--num-high", dest="num_low", default=DEFAULT_NUM_HIGH, type=int, help=f"number of highest average samples to plot (default {DEFAULT_NUM_HIGH})"
+        "-n",
+        "--num-high",
+        dest="num_low",
+        default=DEFAULT_NUM_HIGH,
+        type=int,
+        help=f"number of highest average samples to plot (default {DEFAULT_NUM_HIGH})",
     )
     parser.add_argument(
         "-o",
@@ -103,7 +114,12 @@ def parse_arguments() -> argparse.Namespace:
         action="store_true",
         help="verbose - more logging and outputs",
     )
-    parser.add_argument("-l", "--logfile", help=f"log file name (default {LOG_DEFAULT})", default=LOG_DEFAULT)
+    parser.add_argument(
+        "-l",
+        "--logfile",
+        help=f"log file name (default {LOG_DEFAULT})",
+        default=LOG_DEFAULT,
+    )
     args = parser.parse_args()
 
     #
@@ -130,7 +146,14 @@ def parse_arguments() -> argparse.Namespace:
     return args
 
 
-def setup_inputs_outputs(input_clinical_file: str, diversity_dir: str, distances_dir: str, output_dir: str, output_clinical_file: str, force: bool=False) -> tuple:
+def setup_inputs_outputs(
+    input_clinical_file: str,
+    diversity_dir: str,
+    distances_dir: str,
+    output_dir: str,
+    output_clinical_file: str,
+    force: bool = False,
+) -> tuple:
     """configure and validate input/output
 
     Args:
@@ -177,16 +200,30 @@ def setup_inputs_outputs(input_clinical_file: str, diversity_dir: str, distances
     LOGGER.debug(f"Input clinical data: {real_input_clinical_file}")
     LOGGER.debug(f"Output clinical data: {real_output_clinical_file}")
     if real_input_clinical_file == real_output_clinical_file:
-        LOGGER.error("input and output clinical files map to the same file - exiting to avoid overwriting")
+        LOGGER.error(
+            "input and output clinical files map to the same file - exiting to avoid overwriting"
+        )
         sys.exit(1)
 
     # return the clinical output file full path
-    inputs = InputFiles(clinical_file=real_input_clinical_file, diversity_dir=pathlib.Path(diversity_dir), distances_dir=pathlib.Path(distances_dir))
-    outputs = OutputFiles(clinical_file=real_output_clinical_file, output_dir=pathlib.Path(output_dir))
+    inputs = InputFiles(
+        clinical_file=real_input_clinical_file,
+        diversity_dir=pathlib.Path(diversity_dir),
+        distances_dir=pathlib.Path(distances_dir),
+    )
+    outputs = OutputFiles(
+        clinical_file=real_output_clinical_file, output_dir=pathlib.Path(output_dir)
+    )
     return (inputs, outputs)
 
 
-def generate_diversity_stats(clinical_data_file: pathlib.Path, diversity_dir: pathlib.Path, clinical_data_output: pathlib.Path, output_dir: pathlib.Path=None, verbose: bool=False) -> pd.DataFrame:
+def generate_diversity_stats(
+    clinical_data_file: pathlib.Path,
+    diversity_dir: pathlib.Path,
+    clinical_data_output: pathlib.Path,
+    output_dir: pathlib.Path = None,
+    verbose: bool = False,
+) -> pd.DataFrame:
     """Generate mean/std dev for each diversity data set and add to clinical data to create a new file
 
     Args:
@@ -213,7 +250,9 @@ def generate_diversity_stats(clinical_data_file: pathlib.Path, diversity_dir: pa
     LOGGER.debug(clinical_data)
 
     # read all the diversity files into a dataframe
-    diversity_filenames = [f for f in diversity_dir.iterdir() if str(f).endswith(DIVERSITY_FILENAME_SUFFIX)]
+    diversity_filenames = [
+        f for f in diversity_dir.iterdir() if str(f).endswith(DIVERSITY_FILENAME_SUFFIX)
+    ]
     LOGGER.debug(diversity_filenames)
     diversity_data = pd.DataFrame()
     for diversity_filename in diversity_filenames:
@@ -241,12 +280,16 @@ def generate_diversity_stats(clinical_data_file: pathlib.Path, diversity_dir: pa
     LOGGER.debug("-- clinical data output --")
     LOGGER.debug(clinical_data)
 
-    clinical_data.to_csv(clinical_data_output, sep="\t", index=False, float_format='%.3f')
+    clinical_data.to_csv(
+        clinical_data_output, sep="\t", index=False, float_format="%.3f"
+    )
 
     return clinical_data
 
 
-def get_extreme_diversity_samples(clinical_data:pd.DataFrame, num_high: int=2 , num_low: int=1) -> list:
+def get_extreme_diversity_samples(
+    clinical_data: pd.DataFrame, num_high: int = 2, num_low: int = 1
+) -> list:
     """Get extreme samples (high/low diversity averages)
 
     Args:
@@ -258,8 +301,12 @@ def get_extreme_diversity_samples(clinical_data:pd.DataFrame, num_high: int=2 , 
         list: sample code names with N highest/M lowest diversity averages
     """
     clinical_data.sort_values("averages", inplace=True, ascending=False)
-    clinical_data_to_plot = pd.concat([clinical_data.head(num_high), clinical_data.tail(num_low)])
-    clinical_data_to_plot.drop_duplicates(inplace=True) # cleanup in case the ranges overlap
+    clinical_data_to_plot = pd.concat(
+        [clinical_data.head(num_high), clinical_data.tail(num_low)]
+    )
+    clinical_data_to_plot.drop_duplicates(
+        inplace=True
+    )  # cleanup in case the ranges overlap
 
     LOGGER.debug("-- clinical data to plot --")
     LOGGER.debug(clinical_data_to_plot)
@@ -267,8 +314,12 @@ def get_extreme_diversity_samples(clinical_data:pd.DataFrame, num_high: int=2 , 
     return list(clinical_data_to_plot.index)
 
 
-
-def generate_plots(code_names:list, distance_dir: pathlib.Path, output_dir: pathlib.Path, verbose: bool=False) -> None:
+def generate_plots(
+    code_names: list,
+    distance_dir: pathlib.Path,
+    output_dir: pathlib.Path,
+    verbose: bool = False,
+) -> None:
     """Generate all plots as PDFs
 
     Args:
@@ -293,48 +344,75 @@ def generate_plots(code_names:list, distance_dir: pathlib.Path, output_dir: path
         _scatter_plot(code_name, distance_data, output_dir)
         _kmeans_plots(code_name, distance_data, output_dir)
 
+
 #
 # helper code
 #
 
-def _scatter_plot(code_name:str, distance_data:pd.DataFrame, output_dir:pathlib.Path) -> None:
+
+def _scatter_plot(
+    code_name: str, distance_data: pd.DataFrame, output_dir: pathlib.Path
+) -> None:
     """Generate scatter plot of distance data
 
     Args:
-        code_name (str): code name 
+        code_name (str): code name
         distance_data (pd.DataFrame): distance data for the code name
         output_dir (pathlib.Path): output directory
     """
-    matplotlib.use("pdf") # non-GUI backend
+    matplotlib.use("pdf")  # non-GUI backend
     sns.set(font_scale=0.6, palette="colorblind", style="darkgrid")
-    dplot = sns.lmplot(data=distance_data, x="x", y="y", fit_reg=False, scatter_kws={"s": 10, 'linewidths':0.5})
+    dplot = sns.lmplot(
+        data=distance_data,
+        x="x",
+        y="y",
+        fit_reg=False,
+        scatter_kws={"s": 10, "linewidths": 0.5},
+    )
     dplot.set(title=code_name)
     dplot.tight_layout()
-    pdf_metadata = {"CreationDate": None} # removing field which makes PDFs non-deterministic
+    pdf_metadata = {
+        "CreationDate": None
+    }  # removing field which makes PDFs non-deterministic
     dplot.savefig(pathlib.Path(output_dir, f"{code_name}.pdf"), metadata=pdf_metadata)
     plt.close()
 
 
-def _kmeans_plots(code_name:str, distance_data:pd.DataFrame, output_dir:pathlib.Path, max_clusters: int=8) -> None:
+def _kmeans_plots(
+    code_name: str,
+    distance_data: pd.DataFrame,
+    output_dir: pathlib.Path,
+    max_clusters: int = 8,
+) -> None:
     """Generate K-means plot of distance data
 
     Args:
-        code_name (str): code name 
+        code_name (str): code name
         distance_data (pd.DataFrame): distance data for the code name
         output_dir (pathlib.Path): output directory
         max_clusters (int, optional): maximum number of clusters (defaults to 8)
     """
-    matplotlib.use("pdf") # non-GUI backend
+    matplotlib.use("pdf")  # non-GUI backend
 
     subplots = []
-    distortions = [] # for elbow plot
+    distortions = []  # for elbow plot
     for nclusters in range(1, max_clusters + 1):
         # kmeans clustering
         kmeans = sklearn.cluster.KMeans(nclusters, random_state=0)
         cluster_labels = kmeans.fit_predict(distance_data)
 
         # https://pythonprogramminglanguage.com/kmeans-elbow-method/
-        distortions.append(sum(np.min(sp_distance.cdist(distance_data.to_numpy(), kmeans.cluster_centers_), axis=1)) / distance_data.shape[0])
+        distortions.append(
+            sum(
+                np.min(
+                    sp_distance.cdist(
+                        distance_data.to_numpy(), kmeans.cluster_centers_
+                    ),
+                    axis=1,
+                )
+            )
+            / distance_data.shape[0]
+        )
 
         # add cluster data for plotting purposes
         distance_data[f"cluster_{nclusters}"] = cluster_labels
@@ -342,7 +420,15 @@ def _kmeans_plots(code_name:str, distance_data:pd.DataFrame, output_dir:pathlib.
         # https://stackoverflow.com/questions/64277625/save-multiple-seaborn-plots-into-one-pdf-file
         sns.set(font_scale=0.6, style="darkgrid")
         _, ax = plt.subplots()
-        kplot = sns.scatterplot(data=distance_data, x="x", y="y", hue=f"cluster_{nclusters}", s=10, linewidths=0.5, palette="colorblind")
+        kplot = sns.scatterplot(
+            data=distance_data,
+            x="x",
+            y="y",
+            hue=f"cluster_{nclusters}",
+            s=10,
+            linewidths=0.5,
+            palette="colorblind",
+        )
         kplot.set(title=f"{code_name} K-means # clusters: {nclusters}")
         kplot.legend(title="cluster")
         subplots.append(ax)
@@ -350,17 +436,25 @@ def _kmeans_plots(code_name:str, distance_data:pd.DataFrame, output_dir:pathlib.
     # make elbow plot
     sns.set(font_scale=0.6, style="darkgrid")
     _, ax = plt.subplots()
-    lplot = sns.lineplot(x=range(1, max_clusters + 1), y=distortions, palette="colorblind", marker="s", markersize=5)
+    lplot = sns.lineplot(
+        x=range(1, max_clusters + 1),
+        y=distortions,
+        palette="colorblind",
+        marker="s",
+        markersize=5,
+    )
     lplot.set(title=f"{code_name} elbow plot", xlabel="# clusters", ylabel="distortion")
     subplots.append(ax)
-    
+
     # write cluster plots + elbow plot
-    pdf_metadata = {"CreationDate": None} # removing field which makes PDFs non-deterministic
+    pdf_metadata = {
+        "CreationDate": None
+    }  # removing field which makes PDFs non-deterministic
     pdf_file = pathlib.Path(output_dir, f"{code_name}_kmeans.pdf")
     with backend_pdf.PdfPages(pdf_file, metadata=pdf_metadata) as pdf:
         for p in subplots:
             pdf.savefig(p.figure)
-    plt.close('all')
+    plt.close("all")
 
 
 def _setup_logger(debug: bool, logfile: str) -> None:
@@ -392,18 +486,33 @@ def _setup_logger(debug: bool, logfile: str) -> None:
 
 
 def main():
-    """main
-    """
+    """main"""
     args = parse_arguments()
     LOGGER.info("-- Setup input/output --")
-    (inputs, outputs) = setup_inputs_outputs(args.clinical_data_file, args.diversity_dir, args.distances_dir, args.output_dir, args.clinical_data_output, args.force)
+    (inputs, outputs) = setup_inputs_outputs(
+        args.clinical_data_file,
+        args.diversity_dir,
+        args.distances_dir,
+        args.output_dir,
+        args.clinical_data_output,
+        args.force,
+    )
     LOGGER.info("-- Generate Diversity Statistics --")
-    clinical_data = generate_diversity_stats(inputs.clinical_file, inputs.diversity_dir, outputs.clinical_file, outputs.output_dir, args.verbose)
+    clinical_data = generate_diversity_stats(
+        inputs.clinical_file,
+        inputs.diversity_dir,
+        outputs.clinical_file,
+        outputs.output_dir,
+        args.verbose,
+    )
     LOGGER.info("-- Get clinical samples to plot --")
-    code_names = get_extreme_diversity_samples(clinical_data, args.num_low, args.num_high)
+    code_names = get_extreme_diversity_samples(
+        clinical_data, args.num_low, args.num_high
+    )
     LOGGER.info("-- Generate plots --")
     generate_plots(code_names, inputs.distances_dir, outputs.output_dir, args.verbose)
     LOGGER.info("-- DONE --")
+
 
 if __name__ == "__main__":
     main()
